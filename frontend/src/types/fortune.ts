@@ -9,8 +9,14 @@ export interface UserSettings {
 }
 
 export interface FortuneData {
-  summary: string;
-  finance: string;
+  // Main daily overview paragraph
+  overview: string;
+  // Category fortunes
+  wealth: string;
   love: string;
-  career: string;
+  success: string;
+  // Suggested action or tip for the day
+  action: string;
+  // Optional lunar date string e.g. "음력 1월 15일"
+  lunarDate?: string;
 }

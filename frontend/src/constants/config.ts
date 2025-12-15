@@ -1,5 +1,10 @@
+const env =
+  typeof globalThis !== 'undefined' && (globalThis as any).process?.env
+    ? ((globalThis as any).process.env as Record<string, string | undefined>)
+    : {};
+
 export const API_CONFIG = {
-  BASE_URL: process.env.API_URL || 'http://localhost:3000/api',
+  BASE_URL: env.API_URL || 'http://localhost:3000/api',
   TIMEOUT: 10000,
 };
 

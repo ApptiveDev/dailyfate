@@ -152,6 +152,7 @@ export default function Home() {
           onPrev={handlePrevDay}
           fortune={fortune}
           loading={loadingFortune}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
       )}
 
