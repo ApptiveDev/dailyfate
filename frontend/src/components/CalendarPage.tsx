@@ -4,7 +4,7 @@ import {
   Animated,
   Dimensions,
   Easing,
-  Pressable,
+  PanResponder,
   ScrollView,
   Text,
   View,
@@ -23,6 +23,7 @@ interface Props {
 }
 
 const WEEKDAY_HANJA = ['日', '月', '火', '水', '木', '金', '土'];
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 const CalendarPage: React.FC<Props> = ({
   date,
@@ -36,11 +37,19 @@ const CalendarPage: React.FC<Props> = ({
   const tearAnim = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
+  const cutProgress = useRef(new Animated.Value(0)).current;
+  const scissorX = useRef(new Animated.Value(0)).current;
+  const scissorStartX = useRef(0);
   const [isTearing, setIsTearing] = useState(false);
+  const [trackWidth, setTrackWidth] = useState(0);
+  const [pageHeight, setPageHeight] = useState(Dimensions.get('window').height);
 
   // Reset scroll to top when the date changes
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
+    tearAnim.setValue(0);
+    cutProgress.setValue(0);
+    scissorX.setValue(0);
   }, [date]);
 
   // Chevron bounce animation (indicator to scroll)
@@ -73,20 +82,32 @@ const CalendarPage: React.FC<Props> = ({
     setIsTearing(true);
 
     Animated.sequence([
+      Animated.parallel([
+        Animated.timing(cutProgress, {
+          toValue: 1,
+          duration: 180,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(tearAnim, {
+          toValue: 0.35,
+          duration: 180,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+      ]),
       Animated.timing(tearAnim, {
         toValue: 1,
-        duration: 320,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(tearAnim, {
-        toValue: 0,
-        duration: 180,
+        duration: 360,
         easing: Easing.in(Easing.quad),
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]).start(() => {
       onNext();
+      tearAnim.setValue(0);
+      cutProgress.setValue(0);
+      scissorX.setValue(0);
+      scissorStartX.current = 0;
       setTimeout(() => setIsTearing(false), 100);
     });
   };
@@ -97,26 +118,37 @@ const CalendarPage: React.FC<Props> = ({
   const weekday = date.getDay();
 
   const accentColor = weekday === 0 ? '#dc2626' : weekday === 6 ? '#2563eb' : '#111827';
-  const pageHeight = Dimensions.get('window').height;
+  const maxDrag = Math.max(trackWidth - 32, 0);
+
+  const dragPullDown = scissorX.interpolate({
+    inputRange: [0, Math.max(maxDrag, 1)],
+    outputRange: [0, 6],
+    extrapolate: 'clamp',
+  });
+
+  const tearLift = tearAnim.interpolate({
+    inputRange: [0, 0.35, 1],
+    outputRange: [0, -12, pageHeight * 0.8],
+  });
+
+  const pageOpacity = tearAnim.interpolate({
+    inputRange: [0, 0.65, 1],
+    outputRange: [1, 0.97, 0],
+    extrapolate: 'clamp',
+  });
 
   const tearTransform = {
     transform: [
       {
-        translateY: tearAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, -24],
-        }),
+        translateY: Animated.add(dragPullDown, tearLift),
       },
       {
-        rotate: tearAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: ['0deg', '-2deg'],
-        }),
+        rotate: '0deg',
       },
       {
         scale: tearAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 0.99],
+          inputRange: [0, 0.35, 1],
+          outputRange: [1, 0.997, 1],
         }),
       },
     ],
@@ -139,9 +171,122 @@ const CalendarPage: React.FC<Props> = ({
     extrapolate: 'clamp',
   });
 
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => {
+      scissorX.stopAnimation((value) => {
+        scissorStartX.current = value;
+      });
+    },
+    onPanResponderMove: (_, { dx }) => {
+      const next = clamp(scissorStartX.current + dx, 0, maxDrag);
+      scissorX.setValue(next);
+      cutProgress.setValue(maxDrag ? next / maxDrag : 0);
+    },
+    onPanResponderRelease: () => {
+      scissorX.stopAnimation((value) => {
+        const progress = maxDrag ? value / maxDrag : 0;
+        if (!isTearing && progress > 0.9 && maxDrag > 12) {
+          Animated.parallel([
+            Animated.timing(scissorX, {
+              toValue: maxDrag,
+              duration: 140,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: false,
+            }),
+            Animated.timing(cutProgress, {
+              toValue: 1,
+              duration: 140,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: false,
+            }),
+          ]).start(() => {
+            handleTear();
+          });
+        } else {
+          Animated.spring(scissorX, {
+            toValue: 0,
+            friction: 6,
+            tension: 45,
+            useNativeDriver: false,
+          }).start(() => {
+            scissorStartX.current = 0;
+          });
+          Animated.spring(cutProgress, {
+            toValue: 0,
+            friction: 6,
+            tension: 45,
+            useNativeDriver: false,
+          }).start();
+        }
+      });
+    },
+  });
+
   return (
     <View className="relative flex-1 bg-stone-200">
       <View className="absolute inset-0 bg-white" />
+
+      <View className="z-10 bg-stone-200 px-6 pt-3">
+        <View
+          className="relative h-12 justify-center"
+          onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
+        >
+          <View className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-gray-300" />
+
+          <Animated.View
+            pointerEvents="none"
+            className="absolute left-0 right-0 top-1/2 h-4 -translate-y-1/2 rounded-full"
+            style={{
+              backgroundColor: '#000',
+              opacity: cutProgress.interpolate({
+                inputRange: [0, 0.15, 1],
+                outputRange: [0, 0.05, 0.16],
+                extrapolate: 'clamp',
+              }),
+              transform: [
+                {
+                  translateY: cutProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 8],
+                  }),
+                },
+                {
+                  scaleX: cutProgress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.82, 1],
+                  }),
+                },
+              ],
+              shadowColor: '#000',
+              shadowOpacity: 0.14,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 6,
+            }}
+          />
+
+          <Animated.View
+            {...panResponder.panHandlers}
+            className="h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white"
+            style={{
+              transform: [
+                {
+                  translateX: scissorX,
+                },
+              ],
+              shadowColor: '#000',
+              shadowOpacity: 0.12,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 4 },
+              elevation: 4,
+            }}
+          >
+            <Feather name="scissors" size={18} color="#0f172a" />
+          </Animated.View>
+        </View>
+      </View>
 
       <Animated.View
         className="flex-1 bg-white"
@@ -153,8 +298,15 @@ const CalendarPage: React.FC<Props> = ({
             shadowOffset: { width: 0, height: 16 },
             elevation: 10,
           },
+          { opacity: pageOpacity },
           tearTransform,
         ]}
+        onLayout={(e) => {
+          const h = Math.round(e.nativeEvent.layout.height);
+          if (h && Math.abs(h - pageHeight) > 2) {
+            setPageHeight(h);
+          }
+        }}
       >
         <Animated.ScrollView
           ref={scrollRef}
@@ -222,7 +374,7 @@ const CalendarPage: React.FC<Props> = ({
 
             <Animated.View
               style={[{ opacity: indicatorOpacity }, bounceStyle]}
-              className="absolute inset-x-0 bottom-40 items-center"
+              className="absolute inset-x-0 bottom-20 items-center"
             >
               <Feather name="chevron-down" size={28} color="#d1d5db" />
               <Text className=" font-serif text-gray-500">운세보러가기</Text>
