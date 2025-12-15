@@ -218,25 +218,6 @@ const CalendarPage: React.FC<Props> = ({
                   </Text>
                 )}
               </View>
-
-              <View className="mt-6 flex-row items-center space-x-3">
-                <Pressable
-                  onPress={onPrev}
-                  className="rounded-full bg-stone-100 px-3 py-2 active:opacity-80"
-                  hitSlop={8}
-                  accessibilityLabel="이전 날 보기"
-                >
-                  <Feather name="chevron-left" size={18} color="#4b5563" />
-                </Pressable>
-                <Pressable
-                  onPress={handleTear}
-                  className="flex-row items-center space-x-2 rounded-full bg-gray-900 px-4 py-2 active:opacity-85"
-                  accessibilityLabel="다음 날로 넘어가기"
-                >
-                  <Feather name="scissors" size={16} color="#fff" />
-                  <Text className="text-sm font-semibold text-white">다음 날로 넘기기</Text>
-                </Pressable>
-              </View>
             </View>
 
             <Animated.View

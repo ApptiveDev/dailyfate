@@ -11,7 +11,7 @@ export default function RootLayout() {
           <Stack.Screen
             name="index"
             options={{
-              headerTitle: '하루 일력',
+              headerTitle: '',
               headerShown: true,
             }}
           />
