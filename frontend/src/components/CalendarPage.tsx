@@ -246,7 +246,7 @@ const CalendarPage: React.FC<Props> = ({
             </View>
 
             {/* Center content */}
-            <View style={{ flex: 1, alignItems: 'center', marginTop: '40%' }}>
+            <View style={{ flex: 1, marginTop: '40%' }} className="items-center">
               <Text
                 style={{
                   fontFamily: 'Noto Serif KR',
