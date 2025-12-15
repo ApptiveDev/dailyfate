@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { Gender, UserSettings } from '../types/fortune';
 
 interface Props {
@@ -34,34 +34,40 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues }) => {
   };
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.container}>
-        <Text style={styles.title}>반가워요! 정보를 입력해주세요</Text>
-        <Text style={styles.caption}>정확한 운세 분석을 위해 필요해요.</Text>
+    <View className="absolute inset-0 z-10 bg-white px-5 pt-8">
+      <View className="space-y-5">
+        <View className="space-y-1">
+          <Text className="text-2xl font-extrabold text-gray-900">반가워요! 정보를 입력해주세요</Text>
+          <Text className="text-sm text-gray-500">정확한 운세 분석을 위해 필요해요.</Text>
+        </View>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>닉네임</Text>
+        <View className="space-y-2.5">
+          <Text className="text-sm font-bold text-gray-700">닉네임</Text>
           <TextInput
             value={form.nickname}
             onChangeText={(text) => update({ nickname: text })}
             placeholder="김토스"
             placeholderTextColor="#9ca3af"
-            style={styles.input}
+            className="rounded-xl bg-gray-100 px-3.5 py-3.5 text-base text-gray-900"
           />
         </View>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>성별</Text>
-          <View style={styles.genderRow}>
+        <View className="space-y-2.5">
+          <Text className="text-sm font-bold text-gray-700">성별</Text>
+          <View className="flex-row space-x-2.5">
             {genderOptions.map((opt) => {
               const active = form.gender === opt.val;
               return (
                 <Pressable
                   key={opt.val}
-                  style={[styles.genderButton, active && styles.genderButtonActive]}
+                  className={`flex-1 items-center rounded-xl px-4 py-3 ${
+                    active ? 'bg-gray-900' : 'bg-gray-100'
+                  }`}
                   onPress={() => update({ gender: opt.val })}
                 >
-                  <Text style={[styles.genderText, active && styles.genderTextActive]}>
+                  <Text
+                    className={`text-base font-bold ${active ? 'text-white' : 'text-gray-500'}`}
+                  >
                     {opt.label}
                   </Text>
                 </Pressable>
@@ -70,137 +76,41 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues }) => {
           </View>
         </View>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>생년월일</Text>
+        <View className="space-y-2.5">
+          <Text className="text-sm font-bold text-gray-700">생년월일</Text>
           <TextInput
             value={form.birthdate}
             onChangeText={(text) => update({ birthdate: text })}
             placeholder="YYYY-MM-DD"
             placeholderTextColor="#9ca3af"
-            style={styles.input}
+            className="rounded-xl bg-gray-100 px-3.5 py-3.5 text-base text-gray-900"
           />
         </View>
 
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>매일 알림</Text>
-          <View style={styles.notifyRow}>
-            <Text style={styles.notifyLabel}>알림 시간</Text>
+        <View className="space-y-2.5">
+          <Text className="text-sm font-bold text-gray-700">매일 알림</Text>
+          <View className="flex-row items-center justify-between rounded-xl bg-gray-100 px-3.5 py-3.5">
+            <Text className="text-base font-semibold text-gray-900">알림 시간</Text>
             <TextInput
               value={form.notificationTime}
               onChangeText={(text) => update({ notificationTime: text })}
               placeholder="08:00"
               placeholderTextColor="#9ca3af"
-              style={styles.notifyInput}
+              className="min-w-[80] text-right text-base text-gray-900"
             />
           </View>
         </View>
 
         <Pressable
-          style={[styles.submit, !isValid && { opacity: 0.4 }]}
+          className={`mt-2 rounded-xl py-3.5 ${isValid ? 'bg-gray-900' : 'bg-gray-900/40'}`}
           disabled={!isValid}
           onPress={handleSubmit}
         >
-          <Text style={styles.submitText}>시작하기</Text>
+          <Text className="text-center text-lg font-extrabold text-white">시작하기</Text>
         </Pressable>
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#fff',
-    zIndex: 10,
-    paddingHorizontal: 20,
-    paddingTop: 32,
-  },
-  container: {
-    gap: 18,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#111827',
-    lineHeight: 30,
-  },
-  caption: {
-    color: '#6b7280',
-    fontSize: 14,
-  },
-  fieldGroup: {
-    gap: 10,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#374151',
-  },
-  input: {
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: '#F2F4F6',
-    fontSize: 16,
-    color: '#111827',
-  },
-  genderRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  genderButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: '#F2F4F6',
-    alignItems: 'center',
-  },
-  genderButtonActive: {
-    backgroundColor: '#111827',
-  },
-  genderText: {
-    color: '#6b7280',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  genderTextActive: {
-    color: '#fff',
-  },
-  notifyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-    backgroundColor: '#F2F4F6',
-    borderRadius: 12,
-  },
-  notifyLabel: {
-    fontSize: 16,
-    color: '#111827',
-    fontWeight: '600',
-  },
-  notifyInput: {
-    minWidth: 80,
-    textAlign: 'right',
-    fontSize: 16,
-    color: '#111827',
-  },
-  submit: {
-    marginTop: 8,
-    backgroundColor: '#111827',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  submitText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-});
 
 export default UserInfoForm;

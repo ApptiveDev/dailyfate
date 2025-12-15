@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, Switch, Text, TextInput, View } from 'react-native';
 import { UserSettings } from '../types/fortune';
 import { Feather } from '@expo/vector-icons';
 
@@ -27,28 +27,27 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      <View className="flex-1 justify-end bg-black/25">
+        <Pressable className="absolute inset-0" onPress={onClose} />
 
-        <View style={styles.panel}>
-          <View style={styles.panelHeader}>
-            <Text style={styles.panelTitle}>설정</Text>
-            <Pressable onPress={onClose} hitSlop={12}>
-              <Feather name="x" size={24} color="#6b7280" />
+        <View className="gap-4 rounded-t-2xl bg-stone-100 px-4 pb-6 pt-3">
+          <View className="flex-row items-center justify-between py-2">
+            <Text className="text-lg font-extrabold text-gray-900">설정</Text>
+            <Pressable onPress={onClose} hitSlop={12} className="rounded-full p-2 active:opacity-70">
+              <Feather name="x" size={22} color="#6b7280" />
             </Pressable>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>내 정보</Text>
-            <View style={styles.card}>
+          <View className="space-y-2">
+            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">내 정보</Text>
+            <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
               <Row label="닉네임">
                 <TextInput
                   value={form.nickname}
                   onChangeText={(text) => update({ nickname: text })}
                   placeholder="입력해주세요"
                   placeholderTextColor="#d1d5db"
-                  style={styles.inputRight}
-                  textAlign="right"
+                  className="min-w-[120] text-right text-[15px] text-gray-900"
                 />
               </Row>
               <Row label="생년월일" divider>
@@ -57,16 +56,15 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
                   onChangeText={(text) => update({ birthdate: text })}
                   placeholder="YYYY-MM-DD"
                   placeholderTextColor="#d1d5db"
-                  style={styles.inputRight}
-                  textAlign="right"
+                  className="min-w-[120] text-right text-[15px] text-gray-900"
                 />
               </Row>
             </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>알림</Text>
-            <View style={styles.card}>
+          <View className="space-y-2">
+            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">알림</Text>
+            <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
               <Row label="매일 알림 받기" divider>
                 <Switch
                   value={form.notificationEnabled}
@@ -82,16 +80,18 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
                     onChangeText={(text) => update({ notificationTime: text })}
                     placeholder="08:00"
                     placeholderTextColor="#d1d5db"
-                    style={styles.inputRight}
-                    textAlign="right"
+                    className="min-w-[120] text-right text-[15px] text-gray-900"
                   />
                 </Row>
               )}
             </View>
           </View>
 
-          <Pressable style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveText}>저장하기</Text>
+          <Pressable
+            className="rounded-xl bg-gray-900 py-3.5 active:opacity-90"
+            onPress={handleSave}
+          >
+            <Text className="text-center text-lg font-extrabold text-white">저장하기</Text>
           </Pressable>
         </View>
       </View>
@@ -104,84 +104,10 @@ const Row: React.FC<{ label: string; children: React.ReactNode; divider?: boolea
   children,
   divider,
 }) => (
-  <View style={[styles.row, divider && styles.rowDivider]}>
-    <Text style={styles.rowLabel}>{label}</Text>
-    <View style={{ flex: 1, alignItems: 'flex-end' }}>{children}</View>
+  <View className={`flex-row items-center px-4 py-3 ${divider ? 'border-b border-gray-200' : ''}`}>
+    <Text className="text-[15px] font-semibold text-gray-900">{label}</Text>
+    <View className="flex-1 items-end">{children}</View>
   </View>
 );
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    justifyContent: 'flex-end',
-  },
-  panel: {
-    backgroundColor: '#F2F4F6',
-    paddingTop: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    gap: 14,
-  },
-  panelHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  panelTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  section: {
-    gap: 8,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontWeight: '700',
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#e5e7eb',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  rowDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e5e7eb',
-  },
-  rowLabel: {
-    fontSize: 15,
-    color: '#111827',
-    fontWeight: '600',
-  },
-  inputRight: {
-    minWidth: 120,
-    color: '#111827',
-    fontSize: 15,
-  },
-  saveButton: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  saveText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-});
 
 export default SettingsSheet;

@@ -120,14 +120,7 @@ export default function Home() {
 
   if (bootLoading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#E5E5E5',
-        }}
-      >
+      <View className="flex-1 items-center justify-center bg-stone-200">
         <ActivityIndicator size="large" color="#191F28" />
       </View>
     );
@@ -137,14 +130,12 @@ export default function Home() {
   const showUserForm = hasOnboarded && !userSettings;
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#E5E5E5' }}>
-      {/* Overlays take precedence */}
+    <View className="flex-1 bg-stone-200">
       {showOnboarding && <Onboarding onComplete={persistHasOnboarded} />}
       {showUserForm && !showOnboarding && (
         <UserInfoForm initialValues={userSettings || undefined} onSubmit={persistUserSettings} />
       )}
 
-      {/* Main calendar view */}
       {!showOnboarding && !showUserForm && (
         <CalendarPage
           date={currentDate}
@@ -156,7 +147,6 @@ export default function Home() {
         />
       )}
 
-      {/* Settings */}
       {userSettings && (
         <SettingsSheet
           visible={isSettingsOpen}

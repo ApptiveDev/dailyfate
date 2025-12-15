@@ -4,6 +4,7 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Pressable,
   ScrollView,
   Text,
   View,
@@ -26,10 +27,10 @@ const WEEKDAY_HANJA = ['日', '月', '火', '水', '木', '金', '土'];
 const CalendarPage: React.FC<Props> = ({
   date,
   onNext,
-  onPrev: _onPrev,
+  onPrev,
   fortune,
   loading,
-  onOpenSettings: _onOpenSettings,
+  onOpenSettings,
 }) => {
   const scrollRef = useRef<ScrollView | null>(null);
   const tearAnim = useRef(new Animated.Value(0)).current;
@@ -139,25 +140,13 @@ const CalendarPage: React.FC<Props> = ({
   });
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#e7e5e4', position: 'relative' }}>
-      {/* Back page placeholder */}
-      <View
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: '#fff',
-        }}
-      />
+    <View className="relative flex-1 bg-stone-200">
+      <View className="absolute inset-0 bg-white" />
 
-      {/* Paper sheet */}
       <Animated.View
+        className="flex-1 bg-white"
         style={[
           {
-            flex: 1,
-            backgroundColor: '#fff',
             shadowColor: '#000',
             shadowOpacity: 0.14,
             shadowRadius: 20,
@@ -167,7 +156,6 @@ const CalendarPage: React.FC<Props> = ({
           tearTransform,
         ]}
       >
-        {/* Content */}
         <Animated.ScrollView
           ref={scrollRef}
           showsVerticalScrollIndicator={false}
@@ -177,191 +165,99 @@ const CalendarPage: React.FC<Props> = ({
             useNativeDriver: true,
           })}
         >
-          {/* Day view */}
-          <View
-            style={{
-              height: pageHeight,
-              backgroundColor: '#fff',
-              position: 'relative',
-              paddingHorizontal: 32,
-              paddingTop: 24,
-              paddingBottom: 120,
-            }}
-          >
-            {/* Header */}
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-              }}
-            >
+          <View style={{ height: pageHeight }} className="relative bg-white px-8 pb-28 pt-6">
+            <View className="flex-row items-start justify-between">
               <View>
-                <Text
-                  style={{ fontFamily: 'serif', fontSize: 13, color: '#9ca3af', letterSpacing: 2 }}
-                >
-                  {year}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: 6 }}>
+                <Text className="font-serif text-xs tracking-[0.25em] text-gray-400">{year}</Text>
+                <View className="mt-1.5 flex-row items-end">
                   <Text
-                    style={{
-                      fontFamily: 'serif',
-                      fontSize: 34,
-                      fontWeight: '700',
-                      color: accentColor,
-                      lineHeight: 38,
-                    }}
+                    className="font-serif text-4xl font-bold leading-10"
+                    style={{ color: accentColor }}
                   >
                     {month}
                   </Text>
-                  <Text
-                    style={{
-                      fontFamily: 'serif',
-                      marginLeft: 6,
-                      fontSize: 16,
-                      color: '#6b7280',
-                      marginBottom: 6,
-                    }}
-                  >
-                    월
-                  </Text>
+                  <Text className="font-serif mb-1.5 ml-1.5 text-base text-gray-500">월</Text>
                 </View>
               </View>
 
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text
-                  style={{
-                    fontFamily: 'serif',
-                    fontSize: 26,
-                    fontWeight: '700',
-                    color: accentColor,
-                  }}
-                >
-                  {WEEKDAY_HANJA[weekday]}
-                </Text>
-                <Text style={{ fontFamily: 'serif', fontSize: 12, color: '#9ca3af', marginTop: 6 }}>
-                  {fortune?.lunarDate || '음력 --'}
-                </Text>
+              <View className="items-end space-y-2">
+                <View className="items-end">
+                  <Text className="font-serif text-3xl font-bold" style={{ color: accentColor }}>
+                    {WEEKDAY_HANJA[weekday]}
+                  </Text>
+                  <Text className="font-serif mt-1 text-xs text-gray-400">
+                    {fortune?.lunarDate || '음력 --'}
+                  </Text>
+                </View>
               </View>
             </View>
 
-            {/* Center content */}
-            <View style={{ flex: 1, marginTop: '40%' }} className="items-center">
+            <View className="flex-1 items-center" style={{ marginTop: '20%' }}>
               <Text
-                style={{
-                  fontFamily: 'Noto Serif KR',
-                  fontSize: 160,
-                  fontWeight: '800',
-                  color: accentColor,
-                  lineHeight: 160,
-                  letterSpacing: -2,
-                }}
+                className="font-serif text-[148px] font-extrabold leading-[148px] tracking-[-0.04em]"
+                style={{ color: accentColor }}
               >
                 {day}
               </Text>
 
-              <View
-                style={{
-                  marginTop: 24,
-                  paddingHorizontal: 24,
-                  width: '100%',
-                  maxWidth: 420,
-                }}
-              >
+              <View className="mt-6 w-full max-w-xl px-6">
                 {loading ? (
-                  <View style={{ alignItems: 'center' }}>
+                  <View className="items-center">
                     <ActivityIndicator size="small" color="#d1d5db" />
-                    <Text
-                      style={{ fontFamily: 'serif', color: '#d1d5db', fontSize: 14, marginTop: 8 }}
-                    >
+                    <Text className="mt-2 font-serif text-sm text-gray-300">
                       운세를 읽고 있습니다...
                     </Text>
                   </View>
                 ) : fortune ? (
-                  <View>
-                    <Text
-                      style={{
-                        fontFamily: 'serif',
-                        color: '#4B5563',
-                        fontSize: 18,
-                        fontWeight: '600',
-                        lineHeight: 26,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {fortune.overview}
-                    </Text>
-                  </View>
+                  <Text className="text-center font-serif text-lg font-semibold leading-7 text-gray-600">
+                    {fortune.overview}
+                  </Text>
                 ) : (
-                  <Text
-                    style={{
-                      fontFamily: 'serif',
-                      color: '#d1d5db',
-                      fontSize: 14,
-                      textAlign: 'center',
-                    }}
-                  >
+                  <Text className="text-center font-serif text-sm text-gray-300">
                     운세 정보가 없습니다.
                   </Text>
                 )}
               </View>
+
+              <View className="mt-6 flex-row items-center space-x-3">
+                <Pressable
+                  onPress={onPrev}
+                  className="rounded-full bg-stone-100 px-3 py-2 active:opacity-80"
+                  hitSlop={8}
+                  accessibilityLabel="이전 날 보기"
+                >
+                  <Feather name="chevron-left" size={18} color="#4b5563" />
+                </Pressable>
+                <Pressable
+                  onPress={handleTear}
+                  className="flex-row items-center space-x-2 rounded-full bg-gray-900 px-4 py-2 active:opacity-85"
+                  accessibilityLabel="다음 날로 넘어가기"
+                >
+                  <Feather name="scissors" size={16} color="#fff" />
+                  <Text className="text-sm font-semibold text-white">다음 날로 넘기기</Text>
+                </Pressable>
+              </View>
             </View>
 
-            {/* Scroll hint */}
             <Animated.View
-              style={[
-                {
-                  position: 'absolute',
-                  bottom: 150,
-                  left: 0,
-                  right: 0,
-                  alignItems: 'center',
-                },
-                bounceStyle,
-                { opacity: indicatorOpacity },
-              ]}
+              style={[{ opacity: indicatorOpacity }, bounceStyle]}
+              className="absolute inset-x-0 bottom-40 items-center"
             >
               <Feather name="chevron-down" size={28} color="#d1d5db" />
-              <Text style={{ fontFamily: 'serif', fontSize: 12, color: '#d1d5db', marginTop: 2 }}>
-                운세보러가기
-              </Text>
+              <Text className=" font-serif text-gray-500">운세보러가기</Text>
             </Animated.View>
           </View>
 
-          {/* Detailed fortunes */}
           <View
-            style={{
-              height: pageHeight,
-              backgroundColor: '#F9FAFB',
-              paddingHorizontal: 32,
-              paddingTop: 52,
-              paddingBottom: 40,
-              borderTopWidth: 1,
-              borderTopColor: '#e5e7eb',
-              borderStyle: 'dashed',
-            }}
+            style={{ height: pageHeight }}
+            className="border-t border-dashed border-gray-200 bg-gray-50 px-8 pb-10 pt-14"
           >
-            <View style={{ maxWidth: 420, width: '100%', alignSelf: 'center', flex: 1 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginBottom: 12,
-                  opacity: 0.6,
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: 'serif',
-                    fontSize: 12,
-                    fontWeight: '700',
-                    color: '#6b7280',
-                    letterSpacing: 2,
-                  }}
-                >
+            <View className="mx-auto flex-1 w-full max-w-xl">
+              <View className="mb-3 flex-row items-center opacity-60">
+                <Text className="font-serif text-[11px] font-bold tracking-[0.2em] text-gray-500">
                   오늘의 운세
                 </Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: '#d1d5db', marginLeft: 10 }} />
+                <View className="ml-2 h-px flex-1 bg-gray-300" />
               </View>
 
               {fortune ? (
@@ -372,14 +268,14 @@ const CalendarPage: React.FC<Props> = ({
                   <FortuneItem icon="zap" label="추천 행동" value={fortune.action} isLast />
                 </>
               ) : (
-                <View style={{ paddingVertical: 20 }}>
-                  <Text style={{ fontFamily: 'serif', fontSize: 15, color: '#9ca3af' }}>
+                <View className="py-5">
+                  <Text className="font-serif text-[15px] text-gray-400">
                     운세 정보가 없습니다.
                   </Text>
                 </View>
               )}
 
-              <View style={{ flex: 1 }} />
+              <View className="flex-1" />
             </View>
           </View>
         </Animated.ScrollView>
@@ -396,22 +292,12 @@ interface FortuneItemProps {
 }
 
 const FortuneItem: React.FC<FortuneItemProps> = ({ icon, label, value, isLast }) => (
-  <View
-    style={{
-      paddingVertical: 18,
-      borderBottomWidth: isLast ? 0 : 1,
-      borderBottomColor: '#e5e7eb',
-    }}
-  >
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+  <View className={`py-4 ${isLast ? '' : 'border-b border-gray-200'}`}>
+    <View className="mb-2 flex-row items-center">
       <Feather name={icon} size={20} color="#9ca3af" style={{ marginRight: 10 }} />
-      <Text style={{ fontFamily: 'serif', fontSize: 16, fontWeight: '700', color: '#191F28' }}>
-        {label}
-      </Text>
+      <Text className="font-serif text-lg font-bold text-gray-900">{label}</Text>
     </View>
-    <Text style={{ fontFamily: 'serif', fontSize: 15, color: '#4B5563', lineHeight: 22 }}>
-      {value}
-    </Text>
+    <Text className="font-serif text-[15px] leading-6 text-gray-600">{value}</Text>
   </View>
 );
 

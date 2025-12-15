@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 interface Props {
@@ -8,18 +8,18 @@ interface Props {
 
 const Onboarding: React.FC<Props> = ({ onComplete }) => {
   return (
-    <View style={styles.overlay}>
-      <View style={styles.card}>
-        <View style={styles.body}>
-          <View style={styles.iconWrap}>
+    <View className="absolute inset-0 z-10 items-center justify-center bg-stone-200 px-5 py-6">
+      <View className="w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl shadow-black/10">
+        <View className="items-center space-y-3.5">
+          <View className="h-14 w-14 items-center justify-center rounded-full bg-gray-100">
             <Feather name="star" size={26} color="#111827" />
           </View>
-          <Text style={styles.title}>하루 일력</Text>
-          <Text style={styles.subtitle}>
+          <Text className="text-2xl font-bold text-gray-900">하루 일력</Text>
+          <Text className="text-center text-sm leading-5 text-gray-500">
             매일 아침, 종이 일력을 뜯듯 당신의 하루를 확인해보세요.
           </Text>
 
-          <View style={styles.guideBox}>
+          <View className="w-full space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
             <GuideItem
               icon="scissors"
               title="다음 날로 넘기기"
@@ -38,8 +38,12 @@ const Onboarding: React.FC<Props> = ({ onComplete }) => {
           </View>
         </View>
 
-        <Pressable style={styles.button} onPress={onComplete} accessibilityLabel="온보딩 완료">
-          <Text style={styles.buttonText}>시작하기</Text>
+        <Pressable
+          className="mt-5 rounded-xl bg-gray-900 py-3.5 active:opacity-90"
+          onPress={onComplete}
+          accessibilityLabel="온보딩 완료"
+        >
+          <Text className="text-center text-lg font-bold text-white">시작하기</Text>
         </Pressable>
       </View>
     </View>
@@ -55,99 +59,13 @@ const GuideItem = ({
   title: string;
   text: string;
 }) => (
-  <View style={styles.guideItem}>
+  <View className="flex-row space-x-3">
     <Feather name={icon} size={16} color="#6b7280" style={{ marginTop: 2 }} />
-    <View style={{ flex: 1 }}>
-      <Text style={styles.guideTitle}>{title}</Text>
-      <Text style={styles.guideText}>{text}</Text>
+    <View className="flex-1">
+      <Text className="text-sm font-bold text-gray-900">{title}</Text>
+      <Text className="mt-0.5 text-xs leading-5 text-gray-500">{text}</Text>
     </View>
   </View>
 );
-
-const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 10,
-    backgroundColor: '#E5E5E5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
-  },
-  body: {
-    alignItems: 'center',
-    gap: 14,
-  },
-  iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  subtitle: {
-    textAlign: 'center',
-    fontSize: 14,
-    color: '#6b7280',
-    lineHeight: 20,
-  },
-  guideBox: {
-    width: '100%',
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#e5e7eb',
-    gap: 12,
-  },
-  guideItem: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  guideTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  guideText: {
-    marginTop: 2,
-    fontSize: 12,
-    color: '#6b7280',
-    lineHeight: 18,
-  },
-  button: {
-    marginTop: 18,
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-});
 
 export default Onboarding;
