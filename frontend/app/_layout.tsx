@@ -7,8 +7,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack screenOptions={{ headerBackVisible: false }}>
+          <Stack.Screen
+            name="index"
+            options={{
+              headerTitle: '',
+              headerShown: true,
+            }}
+          />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

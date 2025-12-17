@@ -5,6 +5,21 @@ const reactPlugin = require('eslint-plugin-react');
 const reactNativePlugin = require('eslint-plugin-react-native');
 const prettierConfig = require('eslint-config-prettier');
 
+const runtimeGlobals = {
+  console: 'readonly',
+  process: 'readonly',
+  setTimeout: 'readonly',
+  clearTimeout: 'readonly',
+  setInterval: 'readonly',
+  clearInterval: 'readonly',
+};
+
+const nodeGlobals = {
+  module: 'readonly',
+  require: 'readonly',
+  __dirname: 'readonly',
+};
+
 module.exports = [
   js.configs.recommended,
   {
@@ -21,6 +36,7 @@ module.exports = [
       globals: {
         React: 'readonly',
         JSX: 'readonly',
+        ...runtimeGlobals,
       },
     },
     plugins: {
@@ -40,6 +56,23 @@ module.exports = [
     settings: {
       react: {
         version: 'detect',
+      },
+    },
+  },
+  {
+    files: [
+      '*.config.js',
+      '*.config.cjs',
+      '*.config.mjs',
+      'babel.config.js',
+      'metro.config.js',
+      'tailwind.config.js',
+      '.lintstagedrc.js',
+    ],
+    languageOptions: {
+      globals: {
+        ...runtimeGlobals,
+        ...nodeGlobals,
       },
     },
   },

@@ -2,8 +2,8 @@ import { ConfigContext, ExpoConfig } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'frontend',
-  slug: 'frontend',
+  name: 'dailyfate',
+  slug: 'dailyfate',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
