@@ -1,37 +1,42 @@
-name: Lint and Test
+name: Frontend Lint
 
 on:
   push:
     branches: [main, dev]
+    paths:
+      - "frontend/**"
   pull_request:
     branches: [main, dev]
+    paths:
+      - "frontend/**"
 
 jobs:
   lint:
-    name: Lint Code
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+
+    defaults:
+      run:
+        working-directory: frontend # ⭐ 핵심
 
     steps:
-      - name: 🏗 Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 🏗 Setup pnpm
+      - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
           run_install: false
 
-      - name: 🏗 Setup Node
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 20
           cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+          cache-dependency-path: frontend/pnpm-lock.yaml # ⭐ 핵심
 
-      - name: 📦 Install dependencies
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: 🧹 Run ESLint
+      - name: Run ESLint
         run: pnpm lint
