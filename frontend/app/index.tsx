@@ -49,20 +49,8 @@ export default function Home() {
 
   // Header: show only when main screen is active
   useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: hasOnboarded && !!userSettings,
-      headerRight: () => (
-        <Pressable
-          onPress={() => setIsSettingsOpen(true)}
-          hitSlop={12}
-          style={{ paddingHorizontal: 8 }}
-          accessibilityLabel="설정 열기"
-        >
-          <Feather name="settings" size={22} color="#111827" />
-        </Pressable>
-      ),
-    });
-  }, [navigation, hasOnboarded, userSettings]);
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   const persistHasOnboarded = async () => {
     setHasOnboarded(true);

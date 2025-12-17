@@ -5,6 +5,7 @@ import {
   Dimensions,
   Easing,
   PanResponder,
+  Pressable,
   ScrollView,
   Text,
   View,
@@ -12,6 +13,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 
 import { FortuneData } from '../types/fortune';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Props {
   date: Date;
@@ -19,7 +21,7 @@ interface Props {
   onPrev: () => void;
   fortune: FortuneData | null;
   loading: boolean;
-  onOpenSettings?: () => void;
+  onOpenSettings: () => void; // ✅ 필수로
 }
 
 const WEEKDAY_HANJA = ['日', '月', '火', '水', '木', '金', '土'];
@@ -224,11 +226,27 @@ const CalendarPage: React.FC<Props> = ({
     },
   });
 
+  const insets = useSafeAreaInsets();
+
   return (
     <View className="relative flex-1 bg-stone-200">
       <View className="absolute inset-0 bg-white" />
 
-      <View className="z-10 bg-stone-200 px-6 pt-3">
+      <View
+        className="z-10 bg-white px-4"
+        style={{ paddingTop: insets.top + 8 }} // ✅ 노치 / 다이나믹 아일랜드 대응
+      >
+        {/* 상단 커스텀 헤더 */}
+        <View className="flex-row items-center justify-between mb-2">
+          {/* 왼쪽 더미 공간 (에러 방지) */}
+          <View style={{ width: 22 }} />
+
+          <Pressable onPress={onOpenSettings} hitSlop={12} accessibilityLabel="설정 열기">
+            <Feather name="settings" size={22} color="#111827" />
+          </Pressable>
+        </View>
+
+        {/* 가위 트랙 */}
         <View
           className="relative h-12 justify-center"
           onLayout={(e) => setTrackWidth(e.nativeEvent.layout.width)}
@@ -236,46 +254,10 @@ const CalendarPage: React.FC<Props> = ({
           <View className="absolute left-0 right-0 top-1/2 -translate-y-1/2 border-t border-dashed border-gray-300" />
 
           <Animated.View
-            pointerEvents="none"
-            className="absolute left-0 right-0 top-1/2 h-4 -translate-y-1/2 rounded-full"
-            style={{
-              backgroundColor: '#000',
-              opacity: cutProgress.interpolate({
-                inputRange: [0, 0.15, 1],
-                outputRange: [0, 0.05, 0.16],
-                extrapolate: 'clamp',
-              }),
-              transform: [
-                {
-                  translateY: cutProgress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 8],
-                  }),
-                },
-                {
-                  scaleX: cutProgress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.82, 1],
-                  }),
-                },
-              ],
-              shadowColor: '#000',
-              shadowOpacity: 0.14,
-              shadowRadius: 12,
-              shadowOffset: { width: 0, height: 6 },
-              elevation: 6,
-            }}
-          />
-
-          <Animated.View
             {...panResponder.panHandlers}
             className="h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white"
             style={{
-              transform: [
-                {
-                  translateX: scissorX,
-                },
-              ],
+              transform: [{ translateX: scissorX }],
               shadowColor: '#000',
               shadowOpacity: 0.12,
               shadowRadius: 8,
