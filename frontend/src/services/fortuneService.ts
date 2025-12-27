@@ -43,11 +43,17 @@ const formatDateToKst = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const readJson = async (response: Response) => {
+const readPayload = async (response: Response) => {
   try {
-    return (await response.json()) as FortuneApiResponse;
+    const rawText = await response.clone().text();
+    if (!rawText) return { payload: null, rawText: null };
+    try {
+      return { payload: JSON.parse(rawText) as FortuneApiResponse, rawText };
+    } catch (_error) {
+      return { payload: null, rawText };
+    }
   } catch (_error) {
-    return null;
+    return { payload: null, rawText: null };
   }
 };
 
@@ -61,18 +67,32 @@ export async function fetchFortuneByDate(date: Date): Promise<FortuneData> {
   const url = `${baseUrl}/fortunes/${dateParam}`;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+  const authToken = API_CONFIG.AUTH_TOKEN;
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (authToken) {
+    const trimmed = authToken.trim();
+    headers.Authorization = trimmed.toLowerCase().startsWith('bearer ')
+      ? trimmed
+      : `Bearer ${trimmed}`;
+  }
 
   try {
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        Accept: 'application/json',
-      },
+      headers,
       signal: controller.signal,
     });
 
-    const payload = await readJson(response);
+    const { payload, rawText } = await readPayload(response);
     if (!response.ok || !payload?.isSuccess) {
+      if (response.status === 401 || payload?.code === 401) {
+        console.warn('Unauthorized fortune response', {
+          status: response.status,
+          url,
+          payload,
+          rawText,
+        });
+      }
       const message = payload?.message || response.statusText || '요청에 실패했습니다.';
       throw new ApiError(message, { status: response.status, code: payload?.code });
     }

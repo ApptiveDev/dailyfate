@@ -13,6 +13,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       projectId: '7eaf22a0-8a86-4d38-96f4-5c8eb183393b',
     },
     EXPO_BASE_URL: processEnv.EXPO_BASE_URL,
+    EXPO_AUTH_TOKEN: processEnv.EXPO_AUTH_TOKEN,
   },
   orientation: 'portrait',
   icon: './assets/icon.png',

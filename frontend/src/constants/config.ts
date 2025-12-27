@@ -9,9 +9,11 @@ const manifestExtra = (Constants.manifest as { extra?: EnvRecord } | undefined)?
 const extra = (Constants.expoConfig?.extra ?? manifestExtra ?? {}) as EnvRecord;
 
 const baseUrl = extra.EXPO_BASE_URL || env.EXPO_BASE_URL || env.API_URL || 'http://localhost:3000';
+const authToken = extra.EXPO_AUTH_TOKEN || env.EXPO_AUTH_TOKEN || env.AUTH_TOKEN;
 
 export const API_CONFIG = {
   BASE_URL: baseUrl,
+  AUTH_TOKEN: authToken,
   TIMEOUT: 10000,
 };
 
