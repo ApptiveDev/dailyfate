@@ -1,16 +1,15 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useNavigation } from 'expo-router';
 
-import { fetchDailyFortune } from '../src/services/geminiService';
-import { FortuneData, UserSettings } from '@/types';
+import { useFortune } from '@/hooks/useFortune';
+import { UserSettings } from '@/types';
 import Onboarding from '@/components/Onboarding';
 import UserInfoForm from '@/components/UserInfoForm';
 import CalendarPage from '@/components/CalendarPage';
 import SettingsSheet from '@/components/SettingsSheet';
-import { Feather } from '@expo/vector-icons';
 
 const HAS_ONBOARDED_KEY = 'hasOnboarded';
 const USER_SETTINGS_KEY = 'userSettings';
@@ -22,9 +21,12 @@ export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
-  const [fortune, setFortune] = useState<FortuneData | null>(null);
-  const [loadingFortune, setLoadingFortune] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const { fortune, loading: loadingFortune, error } = useFortune(
+    currentDate,
+    hasOnboarded && !!userSettings,
+  );
 
   // Load persisted state
   useEffect(() => {
@@ -62,33 +64,10 @@ export default function Home() {
     await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
   };
 
-  // Fortune fetch on date/settings change
   useEffect(() => {
-    let isMounted = true;
-
-    const loadFortune = async () => {
-      if (!hasOnboarded || !userSettings) return;
-      setLoadingFortune(true);
-      setFortune(null);
-      try {
-        const data = await fetchDailyFortune(currentDate, userSettings);
-        if (isMounted) setFortune(data);
-      } catch (error) {
-        console.warn('Failed to fetch fortune', error);
-        if (isMounted) {
-          Alert.alert('운세를 불러오지 못했어요', '잠시 후 다시 시도해주세요.');
-        }
-      } finally {
-        if (isMounted) setLoadingFortune(false);
-      }
-    };
-
-    loadFortune();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentDate, hasOnboarded, userSettings]);
+    if (!error) return;
+    Alert.alert('운세를 불러오지 못했어요', error.message);
+  }, [error]);
 
   const handleNextDay = useCallback(() => {
     setCurrentDate((prev) => {

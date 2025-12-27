@@ -1,5 +1,8 @@
 import { ConfigContext, ExpoConfig } from 'expo/config';
 
+const processEnv =
+  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'dailyfate',
@@ -9,6 +12,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     eas: {
       projectId: '7eaf22a0-8a86-4d38-96f4-5c8eb183393b',
     },
+    EXPO_BASE_URL: processEnv.EXPO_BASE_URL,
   },
   orientation: 'portrait',
   icon: './assets/icon.png',
