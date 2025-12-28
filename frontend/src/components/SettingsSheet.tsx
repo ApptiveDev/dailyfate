@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   Switch,
   Text,
@@ -99,7 +101,10 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/25">
+      <KeyboardAvoidingView
+        className="flex-1 justify-end bg-black/25 "
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <Pressable className="absolute inset-0" onPress={onClose} />
 
         <View className="gap-4 rounded-t-2xl bg-stone-100 px-4 pb-6 pt-3">
@@ -169,7 +174,7 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
             </Pressable>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
