@@ -110,7 +110,8 @@ const WheelPicker: React.FC<{
   options: string[];
   value: string;
   onChange: (value: string) => void;
-}> = ({ options, value, onChange }) => {
+  itemTextClassName?: string;
+}> = ({ options, value, onChange, itemTextClassName = 'text-base' }) => {
   const scrollRef = useRef<ScrollView | null>(null);
   const padding = ((VISIBLE_ITEMS - 1) / 2) * ITEM_HEIGHT;
 
@@ -149,7 +150,9 @@ const WheelPicker: React.FC<{
               style={{ height: ITEM_HEIGHT }}
               className="items-center justify-center"
             >
-              <Text className={`${isSelected ? 'text-gray-900' : 'text-gray-400'} text-base`}>
+              <Text
+                className={`${isSelected ? 'text-gray-900' : 'text-gray-400'} ${itemTextClassName}`}
+              >
                 {option}
               </Text>
             </View>
@@ -196,6 +199,68 @@ const PickerModal: React.FC<{
       </View>
     </View>
   </Modal>
+);
+
+const DatePickerModal: React.FC<{
+  visible: boolean;
+  title: string;
+  onClose: () => void;
+  year: string;
+  month: string;
+  day: string;
+  yearOptions: string[];
+  monthOptions: string[];
+  dayOptions: string[];
+  onChangeYear: (value: string) => void;
+  onChangeMonth: (value: string) => void;
+  onChangeDay: (value: string) => void;
+}> = ({
+  visible,
+  title,
+  onClose,
+  year,
+  month,
+  day,
+  yearOptions,
+  monthOptions,
+  dayOptions,
+  onChangeYear,
+  onChangeMonth,
+  onChangeDay,
+}) => (
+  <PickerModal visible={visible} title={title} onClose={onClose}>
+    <View className="mb-2 flex-row">
+      <Text className="flex-1 text-center text-xs font-semibold text-gray-500">년</Text>
+      <Text className="flex-1 text-center text-xs font-semibold text-gray-500">월</Text>
+      <Text className="flex-1 text-center text-xs font-semibold text-gray-500">일</Text>
+    </View>
+    <View className="flex-row items-center">
+      <View className="flex-1 items-center">
+        <WheelPicker
+          options={yearOptions}
+          value={year}
+          onChange={onChangeYear}
+          itemTextClassName="text-lg"
+        />
+      </View>
+      <View className="flex-1 items-center">
+        <WheelPicker
+          options={monthOptions}
+          value={month}
+          onChange={onChangeMonth}
+          itemTextClassName="text-lg"
+        />
+      </View>
+      <View className="flex-1 items-center">
+        <WheelPicker
+          options={dayOptions}
+          value={day}
+          onChange={onChangeDay}
+          itemTextClassName="text-lg"
+        />
+      </View>
+    </View>
+  </PickerModal>
 );
 
 const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting = false }) => {
@@ -363,7 +428,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
               onPress={openBirthDateModal}
             >
               <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-semibold text-gray-900">{birthSummary}</Text>
+                <Text className="text-2xl font-semibold text-gray-900">{birthSummary}</Text>
                 <Text className="text-sm font-semibold text-gray-500">선택</Text>
               </View>
             </Pressable>
@@ -413,70 +478,32 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
             )}
           </Pressable>
 
-          <PickerModal
+          <DatePickerModal
             visible={isBirthDateModalOpen}
             title="생년월일"
             onClose={() => setIsBirthDateModalOpen(false)}
-          >
-            <View className="mb-2 flex-row">
-              <Text className="flex-1 text-center text-xs font-semibold text-gray-500">년</Text>
-              <Text className="flex-1 text-center text-xs font-semibold text-gray-500">월</Text>
-              <Text className="flex-1 text-center text-xs font-semibold text-gray-500">일</Text>
-            </View>
-            <View className="flex-row items-center">
-              <View className="flex-1 items-center">
-                <WheelPicker
-                  options={yearOptions}
-                  value={year}
-                  onChange={(nextYear) =>
-                    update({
-                      birthdate: buildBirthDateTime(
-                        nextYear,
-                        month,
-                        day,
-                        birthHour,
-                        birthMinute,
-                      ),
-                    })
-                  }
-                />
-              </View>
-              <View className="flex-1 items-center">
-                <WheelPicker
-                  options={monthOptions}
-                  value={month}
-                  onChange={(nextMonth) =>
-                    update({
-                      birthdate: buildBirthDateTime(
-                        year,
-                        nextMonth,
-                        day,
-                        birthHour,
-                        birthMinute,
-                      ),
-                    })
-                  }
-                />
-              </View>
-              <View className="flex-1 items-center">
-                <WheelPicker
-                  options={dayOptions}
-                  value={day}
-                  onChange={(nextDay) =>
-                    update({
-                      birthdate: buildBirthDateTime(
-                        year,
-                        month,
-                        nextDay,
-                        birthHour,
-                        birthMinute,
-                      ),
-                    })
-                  }
-                />
-              </View>
-            </View>
-          </PickerModal>
+            year={year}
+            month={month}
+            day={day}
+            yearOptions={yearOptions}
+            monthOptions={monthOptions}
+            dayOptions={dayOptions}
+            onChangeYear={(nextYear) =>
+              update({
+                birthdate: buildBirthDateTime(nextYear, month, day, birthHour, birthMinute),
+              })
+            }
+            onChangeMonth={(nextMonth) =>
+              update({
+                birthdate: buildBirthDateTime(year, nextMonth, day, birthHour, birthMinute),
+              })
+            }
+            onChangeDay={(nextDay) =>
+              update({
+                birthdate: buildBirthDateTime(year, month, nextDay, birthHour, birthMinute),
+              })
+            }
+          />
 
           <PickerModal
             visible={isBirthTimeModalOpen}
