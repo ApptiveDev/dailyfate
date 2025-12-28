@@ -9,7 +9,6 @@ import {
   Pressable,
   ScrollView,
   Text,
-  Vibration,
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -187,7 +186,6 @@ const CalendarPage: React.FC<Props> = ({
 
   const handlePrevTap = () => {
     if (isTearing) return;
-    Vibration.vibrate(10);
     onPrev();
   };
 
