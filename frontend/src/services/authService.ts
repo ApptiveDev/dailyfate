@@ -11,9 +11,12 @@ import type { CodeDeliveryDetails } from 'amazon-cognito-identity-js';
 import { API_CONFIG, COGNITO_CONFIG } from '@/constants/config';
 
 export class AuthError extends Error {
-  constructor(message: string) {
+  code?: string;
+
+  constructor(message: string, code?: string) {
     super(message);
     this.name = 'AuthError';
+    this.code = code;
   }
 }
 
@@ -35,9 +38,37 @@ const AUTH_TOKENS_KEY = 'authTokens';
 const AUTH_LAST_USER_KEY = 'authLastUser';
 const TOKEN_EXPIRY_LEEWAY_MS = 60_000;
 
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  UsernameExistsException: '이미 가입된 아이디입니다. 로그인해주세요.',
+  AliasExistsException: '이미 사용 중인 이메일입니다.',
+  UserNotConfirmedException: '계정이 인증되지 않았습니다. 관리자에게 문의해주세요.',
+  NotAuthorizedException: '아이디 또는 비밀번호가 올바르지 않습니다.',
+  UserNotFoundException: '존재하지 않는 계정입니다.',
+  InvalidPasswordException: '비밀번호 정책에 맞지 않습니다.',
+  CodeMismatchException: '인증 코드가 올바르지 않습니다.',
+  ExpiredCodeException: '인증 코드가 만료되었습니다.',
+  LimitExceededException: '요청 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.',
+};
+
 let cachedTokens: AuthTokens | null = null;
 let cachedUser: string | null = null;
 let cacheLoaded = false;
+
+const getErrorCode = (error: unknown) => {
+  if (!error || typeof error !== 'object') return undefined;
+  const candidate = (error as { code?: string; name?: string }).code;
+  if (typeof candidate === 'string') return candidate;
+  const name = (error as { name?: string }).name;
+  return typeof name === 'string' ? name : undefined;
+};
+
+const buildAuthError = (error: unknown, fallback: string) => {
+  const code = getErrorCode(error);
+  const mappedMessage = code ? AUTH_ERROR_MESSAGES[code] : undefined;
+  const message =
+    mappedMessage ?? (error instanceof Error ? error.message : fallback);
+  return new AuthError(message, code);
+};
 
 const getUserPool = () => {
   const { USER_POOL_ID, CLIENT_ID } = COGNITO_CONFIG;
@@ -146,15 +177,13 @@ export const signIn = async (username: string, password: string) => {
         resolve(tokens);
       },
       onFailure: (error) => {
-        const message =
-          error instanceof Error ? error.message : '로그인에 실패했습니다.';
-        reject(new AuthError(message));
+        reject(buildAuthError(error, '로그인에 실패했습니다.'));
       },
       newPasswordRequired: () => {
-        reject(new AuthError('새 비밀번호 설정이 필요합니다.'));
+        reject(new AuthError('새 비밀번호 설정이 필요합니다.', 'NewPasswordRequired'));
       },
       mfaRequired: () => {
-        reject(new AuthError('MFA 설정이 필요합니다.'));
+        reject(new AuthError('MFA 설정이 필요합니다.', 'MFARequired'));
       },
     });
   });
@@ -175,9 +204,7 @@ export const signUp = async (username: string, password: string, email?: string)
   return new Promise<SignUpResult>((resolve, reject) => {
     getUserPool().signUp(trimmedUsername, password, attributes, [], async (error, result) => {
       if (error || !result) {
-        const message =
-          error instanceof Error ? error.message : '회원가입에 실패했습니다.';
-        reject(new AuthError(message));
+        reject(buildAuthError(error, '회원가입에 실패했습니다.'));
         return;
       }
       await saveLastUser(trimmedUsername);
@@ -205,9 +232,7 @@ export const confirmSignUp = async (username: string, code: string) => {
   return new Promise<void>((resolve, reject) => {
     user.confirmRegistration(trimmedCode, true, async (error) => {
       if (error) {
-        const message =
-          error instanceof Error ? error.message : '인증에 실패했습니다.';
-        reject(new AuthError(message));
+        reject(buildAuthError(error, '인증에 실패했습니다.'));
         return;
       }
       await saveLastUser(trimmedUsername);
@@ -230,9 +255,7 @@ export const resendSignUpCode = async (username: string) => {
   return new Promise<CodeDeliveryDetails | null>((resolve, reject) => {
     user.resendConfirmationCode(async (error, result) => {
       if (error) {
-        const message =
-          error instanceof Error ? error.message : '인증 코드 재전송에 실패했습니다.';
-        reject(new AuthError(message));
+        reject(buildAuthError(error, '인증 코드 재전송에 실패했습니다.'));
         return;
       }
       await saveLastUser(trimmedUsername);
