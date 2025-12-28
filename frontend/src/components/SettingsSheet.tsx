@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, Switch, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { UserSettings } from '../types/fortune';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/providers/AuthProvider';
@@ -50,8 +59,7 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
           void signOut();
           return;
         }
-        const message =
-          error instanceof Error ? error.message : '프로필을 불러오지 못했어요.';
+        const message = error instanceof Error ? error.message : '프로필을 불러오지 못했어요.';
         Alert.alert('프로필 조회 실패', message);
       })
       .finally(() => {
@@ -78,8 +86,7 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
         void signOut();
         return;
       }
-      const message =
-        error instanceof Error ? error.message : '프로필을 저장하지 못했어요.';
+      const message = error instanceof Error ? error.message : '프로필을 저장하지 못했어요.';
       Alert.alert('저장 실패', message);
     } finally {
       setIsSaving(false);
@@ -101,13 +108,19 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
               <Text className="text-lg font-extrabold text-gray-900">설정</Text>
               {isFetching && <ActivityIndicator size="small" color="#6b7280" />}
             </View>
-            <Pressable onPress={onClose} hitSlop={12} className="rounded-full p-2 active:opacity-70">
+            <Pressable
+              onPress={onClose}
+              hitSlop={12}
+              className="rounded-full p-2 active:opacity-70"
+            >
               <Feather name="x" size={22} color="#6b7280" />
             </Pressable>
           </View>
 
           <View className="space-y-2">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">내 정보</Text>
+            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              내 정보
+            </Text>
             <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
               <Row label="닉네임">
                 <TextInput
@@ -130,31 +143,6 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
             </View>
           </View>
 
-          <View className="space-y-2">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">알림</Text>
-            <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-              <Row label="매일 알림 받기" divider>
-                <Switch
-                  value={form.notificationEnabled}
-                  onValueChange={(value) => update({ notificationEnabled: value })}
-                  thumbColor="#fff"
-                  trackColor={{ false: '#e5e7eb', true: '#111827' }}
-                />
-              </Row>
-              {form.notificationEnabled && (
-                <Row label="알림 시간">
-                  <TextInput
-                    value={form.notificationTime}
-                    onChangeText={(text) => update({ notificationTime: text })}
-                    placeholder="08:00"
-                    placeholderTextColor="#d1d5db"
-                    className="min-w-[120] text-right text-[15px] text-gray-900"
-                  />
-                </Row>
-              )}
-            </View>
-          </View>
-
           <Pressable
             className={`rounded-xl py-3.5 active:opacity-90 ${
               isBusy ? 'bg-gray-900/60' : 'bg-gray-900'
@@ -169,7 +157,9 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
           </Pressable>
 
           <View className="space-y-2">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">계정</Text>
+            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              계정
+            </Text>
             <Pressable
               className="rounded-xl border border-rose-200 bg-rose-50 py-3.5 active:opacity-90"
               onPress={handleLogout}
