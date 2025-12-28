@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { Gender, UserSettings } from '../types/fortune';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Props {
   onSubmit: (settings: UserSettings) => void;
   initialValues?: UserSettings;
+  isSubmitting?: boolean;
 }
 
 const genderOptions: { val: Gender; label: string }[] = [
@@ -14,7 +15,7 @@ const genderOptions: { val: Gender; label: string }[] = [
   { val: 'other', label: '기타' },
 ];
 
-const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues }) => {
+const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting = false }) => {
   const [form, setForm] = useState<UserSettings>(
     initialValues || {
       nickname: '',
@@ -30,7 +31,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues }) => {
   const update = (patch: Partial<UserSettings>) => setForm((prev) => ({ ...prev, ...patch }));
 
   const handleSubmit = () => {
-    if (!isValid) return;
+    if (!isValid || isSubmitting) return;
     onSubmit(form);
   };
 
@@ -106,11 +107,17 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues }) => {
           </View>
 
           <Pressable
-            className={`mt-2 rounded-xl py-3.5 ${isValid ? 'bg-gray-900' : 'bg-gray-900/40'}`}
-            disabled={!isValid}
+            className={`mt-2 rounded-xl py-3.5 ${
+              isValid && !isSubmitting ? 'bg-gray-900' : 'bg-gray-900/40'
+            }`}
+            disabled={!isValid || isSubmitting}
             onPress={handleSubmit}
           >
-            <Text className="text-center text-lg font-extrabold text-white">시작하기</Text>
+            {isSubmitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className="text-center text-lg font-extrabold text-white">시작하기</Text>
+            )}
           </Pressable>
         </View>
       </View>

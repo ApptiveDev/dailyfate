@@ -12,6 +12,7 @@ import CalendarPage from '@/components/CalendarPage';
 import SettingsSheet from '@/components/SettingsSheet';
 import LoginScreen from '@/components/LoginScreen';
 import { useAuth } from '@/providers/AuthProvider';
+import { ProfileApiError, updateUserProfile } from '@/services/userProfileService';
 
 const HAS_ONBOARDED_KEY = 'hasOnboarded';
 const USER_SETTINGS_KEY = 'userSettings';
@@ -24,6 +25,8 @@ export default function Home() {
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
 
   const { isBootstrapping: authBootstrapping, isSignedIn, signOut } = useAuth();
 
@@ -68,6 +71,30 @@ export default function Home() {
     await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
   };
 
+  const handleUserInfoSubmit = async (settings: UserSettings) => {
+    if (profileSaving) return;
+    setProfileSaving(true);
+    try {
+      const updatedSettings = await updateUserProfile(settings);
+      await persistUserSettings(updatedSettings);
+      if (!hasOnboarded) {
+        await persistHasOnboarded();
+      }
+      setNeedsProfileSetup(false);
+    } catch (error) {
+      if (error instanceof ProfileApiError && error.status === 401) {
+        Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
+        await signOut();
+        return;
+      }
+      const message =
+        error instanceof Error ? error.message : '프로필을 저장하지 못했어요.';
+      Alert.alert('프로필 저장 실패', message);
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (!error) return;
     if (error.status === 401) {
@@ -103,17 +130,21 @@ export default function Home() {
   }
 
   if (!isSignedIn) {
-    return <LoginScreen />;
+    return <LoginScreen onSignUpSuccess={() => setNeedsProfileSetup(true)} />;
   }
 
-  const showOnboarding = !hasOnboarded;
-  const showUserForm = hasOnboarded && !userSettings;
+  const showOnboarding = !hasOnboarded && !needsProfileSetup;
+  const showUserForm = needsProfileSetup || (hasOnboarded && !userSettings);
 
   return (
     <View className="flex-1 bg-stone-200">
       {showOnboarding && <Onboarding onComplete={persistHasOnboarded} />}
       {showUserForm && !showOnboarding && (
-        <UserInfoForm initialValues={userSettings || undefined} onSubmit={persistUserSettings} />
+        <UserInfoForm
+          initialValues={userSettings || undefined}
+          onSubmit={handleUserInfoSubmit}
+          isSubmitting={profileSaving}
+        />
       )}
 
       {!showOnboarding && !showUserForm && (

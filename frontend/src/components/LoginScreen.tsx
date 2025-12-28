@@ -7,7 +7,11 @@ import { AuthError } from '@/services/authService';
 
 type AuthMode = 'signIn' | 'signUp';
 
-const LoginScreen: React.FC = () => {
+interface Props {
+  onSignUpSuccess?: () => void;
+}
+
+const LoginScreen: React.FC<Props> = ({ onSignUpSuccess }) => {
   const { signIn, signUp, isLoading, error, clearError } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signIn');
   const [username, setUsername] = useState('');
@@ -57,14 +61,19 @@ const LoginScreen: React.FC = () => {
       setLocalError('아이디와 비밀번호를 입력해주세요.');
       return;
     }
+    const submittedPassword = password;
     try {
-      const result = await signUp(usernameTrimmed, password);
-      setPassword('');
+      const result = await signUp(usernameTrimmed, submittedPassword);
       if (result.userConfirmed) {
-        setInfoMessage('회원가입이 완료되었습니다. 로그인해주세요.');
-      } else {
-        setInfoMessage('회원가입은 완료되었지만 계정이 활성화되지 않았습니다. 관리자에게 문의해주세요.');
+        await signIn(usernameTrimmed, submittedPassword);
+        setPassword('');
+        onSignUpSuccess?.();
+        return;
       }
+      setPassword('');
+      setInfoMessage(
+        '회원가입은 완료되었지만 계정이 활성화되지 않았습니다. 관리자에게 문의해주세요.',
+      );
       setMode('signIn');
     } catch (err) {
       if (err instanceof AuthError) {
