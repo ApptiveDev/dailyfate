@@ -37,10 +37,10 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-white">
-      <View className="flex-1 bg-white px-5 py-4">
+      <View className="flex-1 bg-white p-12">
         <View className="gap-8">
           <View className="gap-4">
-            <Text className="text-4xl font-extrabold text-gray-900">
+            <Text className="text-3xl font-extrabold text-gray-900 ">
               반가워요!{'\n'}정보를 입력해주세요
             </Text>
             <Text className="text-lg text-gray-500">정확한 운세 분석을 위해 필요해요.</Text>
@@ -51,7 +51,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
             <TextInput
               value={form.nickname}
               onChangeText={(text) => update({ nickname: text })}
-              placeholder="김토스"
+              placeholder="홍길동"
               placeholderTextColor="#9ca3af"
               className="rounded-xl bg-gray-100 px-4 py-5 text-xl text-gray-900"
             />
