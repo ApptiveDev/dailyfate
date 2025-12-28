@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, Switch, Text, TextInput, View } from 'react-native';
 import { UserSettings } from '../types/fortune';
 import { Feather } from '@expo/vector-icons';
+import { useAuth } from '@/providers/AuthProvider';
 
 interface Props {
   visible: boolean;
@@ -12,6 +13,7 @@ interface Props {
 
 const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) => {
   const [form, setForm] = useState<UserSettings>(settings);
+  const { signOut, isLoading } = useAuth();
 
   useEffect(() => {
     if (visible) {
@@ -23,6 +25,10 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
 
   const handleSave = () => {
     onSave(form);
+  };
+
+  const handleLogout = async () => {
+    await signOut();
   };
 
   return (
@@ -93,6 +99,17 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
           >
             <Text className="text-center text-lg font-extrabold text-white">저장하기</Text>
           </Pressable>
+
+          <View className="space-y-2">
+            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">계정</Text>
+            <Pressable
+              className="rounded-xl border border-rose-200 bg-rose-50 py-3.5 active:opacity-90"
+              onPress={handleLogout}
+              disabled={isLoading}
+            >
+              <Text className="text-center text-base font-bold text-rose-600">로그아웃</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>
