@@ -10,6 +10,8 @@ import Onboarding from '@/components/Onboarding';
 import UserInfoForm from '@/components/UserInfoForm';
 import CalendarPage from '@/components/CalendarPage';
 import SettingsSheet from '@/components/SettingsSheet';
+import LoginScreen from '@/components/LoginScreen';
+import { useAuth } from '@/providers/AuthProvider';
 
 const HAS_ONBOARDED_KEY = 'hasOnboarded';
 const USER_SETTINGS_KEY = 'userSettings';
@@ -23,9 +25,11 @@ export default function Home() {
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  const { isBootstrapping: authBootstrapping, isSignedIn, signOut } = useAuth();
+
   const { fortune, loading: loadingFortune, error } = useFortune(
     currentDate,
-    hasOnboarded && !!userSettings,
+    hasOnboarded && !!userSettings && isSignedIn,
   );
 
   // Load persisted state
@@ -66,8 +70,13 @@ export default function Home() {
 
   useEffect(() => {
     if (!error) return;
+    if (error.status === 401) {
+      signOut();
+      Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
+      return;
+    }
     Alert.alert('운세를 불러오지 못했어요', error.message);
-  }, [error]);
+  }, [error, signOut]);
 
   const handleNextDay = useCallback(() => {
     setCurrentDate((prev) => {
@@ -85,12 +94,16 @@ export default function Home() {
     });
   }, []);
 
-  if (bootLoading) {
+  if (bootLoading || authBootstrapping) {
     return (
       <View className="flex-1 items-center justify-center bg-stone-200">
         <ActivityIndicator size="large" color="#191F28" />
       </View>
     );
+  }
+
+  if (!isSignedIn) {
+    return <LoginScreen />;
   }
 
   const showOnboarding = !hasOnboarded;

@@ -1,4 +1,5 @@
 import { API_CONFIG } from '@/constants/config';
+import { getAuthToken } from '@/services/authService';
 import type { FortuneData } from '@/types';
 
 interface FortuneApiResponse {
@@ -67,7 +68,7 @@ export async function fetchFortuneByDate(date: Date): Promise<FortuneData> {
   const url = `${baseUrl}/fortunes/${dateParam}`;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
-  const authToken = API_CONFIG.AUTH_TOKEN;
+  const authToken = await getAuthToken();
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (authToken) {
     const trimmed = authToken.trim();
