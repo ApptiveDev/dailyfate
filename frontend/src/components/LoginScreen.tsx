@@ -1,13 +1,17 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { COGNITO_CONFIG } from '@/constants/config';
 import { useAuth } from '@/providers/AuthProvider';
 
 type AuthMode = 'signIn' | 'signUp' | 'confirm';
 
+const isEmailLike = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
 const LoginScreen: React.FC = () => {
-  const { signIn, signUp, confirmSignUp, isLoading, error, clearError } = useAuth();
+  const { signIn, signUp, confirmSignUp, resendSignUpCode, isLoading, error, clearError } =
+    useAuth();
   const [mode, setMode] = useState<AuthMode>('signIn');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -18,31 +22,70 @@ const LoginScreen: React.FC = () => {
   const [localError, setLocalError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [deliveryMessage, setDeliveryMessage] = useState<string | null>(null);
+  const [codeExpiresAt, setCodeExpiresAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  const usernameTrimmed = username.trim();
+  const emailTrimmed = email.trim();
+  const usernameLooksEmail = useMemo(() => isEmailLike(usernameTrimmed), [usernameTrimmed]);
+  const resolvedEmail = emailTrimmed || (usernameLooksEmail ? usernameTrimmed : '');
 
   const isEmailValid = useMemo(() => {
-    const trimmed = email.trim();
-    if (!trimmed) return true;
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
-  }, [email]);
+    if (!resolvedEmail) return false;
+    return isEmailLike(resolvedEmail);
+  }, [resolvedEmail]);
 
   const canSubmit = useMemo(() => {
     if (mode === 'signIn') {
-      return username.trim() !== '' && password !== '';
+      return usernameTrimmed !== '' && password !== '';
     }
     if (mode === 'signUp') {
       return (
-        username.trim() !== '' &&
+        usernameTrimmed !== '' &&
         password !== '' &&
         confirmPassword !== '' &&
         password === confirmPassword &&
         isEmailValid
       );
     }
-    const resolvedUsername = pendingUsername?.trim() || username.trim();
+    const resolvedUsername = pendingUsername?.trim() || usernameTrimmed;
     return resolvedUsername !== '' && confirmCode.trim() !== '';
-  }, [confirmCode, confirmPassword, isEmailValid, mode, password, pendingUsername, username]);
+  }, [
+    confirmCode,
+    confirmPassword,
+    isEmailValid,
+    mode,
+    password,
+    pendingUsername,
+    usernameTrimmed,
+  ]);
 
   const errorMessage = localError || error;
+  const codeTtlMs = COGNITO_CONFIG.CODE_TTL_MINUTES * 60 * 1000;
+
+  const remainingMs = codeExpiresAt ? Math.max(codeExpiresAt - now, 0) : null;
+  const isExpired = remainingMs !== null && remainingMs <= 0;
+  const remainingLabel = useMemo(() => {
+    if (remainingMs === null) return null;
+    const totalSeconds = Math.max(Math.floor(remainingMs / 1000), 0);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const pad = (value: number) => String(value).padStart(2, '0');
+    if (hours > 0) {
+      return `${hours}:${pad(minutes)}:${pad(seconds)}`;
+    }
+    return `${minutes}:${pad(seconds)}`;
+  }, [remainingMs]);
+
+  useEffect(() => {
+    if (mode !== 'confirm' || !codeExpiresAt) return;
+    setNow(Date.now());
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [codeExpiresAt, mode]);
 
   const resetMessages = () => {
     setLocalError(null);
@@ -60,17 +103,18 @@ const LoginScreen: React.FC = () => {
     if (nextMode !== 'confirm') {
       setConfirmCode('');
       setPendingUsername(null);
+      setCodeExpiresAt(null);
     }
   };
 
   const handleSignIn = async () => {
     resetMessages();
-    if (username.trim() === '' || password === '') {
+    if (usernameTrimmed === '' || password === '') {
       setLocalError('아이디와 비밀번호를 입력해주세요.');
       return;
     }
     try {
-      await signIn(username.trim(), password);
+      await signIn(usernameTrimmed, password);
     } catch (_err) {
       // handled by auth context
     }
@@ -78,7 +122,7 @@ const LoginScreen: React.FC = () => {
 
   const handleSignUp = async () => {
     resetMessages();
-    if (username.trim() === '' || password === '' || confirmPassword === '') {
+    if (usernameTrimmed === '' || password === '' || confirmPassword === '') {
       setLocalError('아이디와 비밀번호를 입력해주세요.');
       return;
     }
@@ -86,12 +130,16 @@ const LoginScreen: React.FC = () => {
       setLocalError('비밀번호가 일치하지 않습니다.');
       return;
     }
+    if (!resolvedEmail) {
+      setLocalError('이메일을 입력해주세요.');
+      return;
+    }
     if (!isEmailValid) {
       setLocalError('올바른 이메일 형식을 입력해주세요.');
       return;
     }
     try {
-      const result = await signUp(username.trim(), password, email.trim() || undefined);
+      const result = await signUp(usernameTrimmed, password, resolvedEmail);
       setPassword('');
       setConfirmPassword('');
       if (result.userConfirmed) {
@@ -99,9 +147,12 @@ const LoginScreen: React.FC = () => {
         setMode('signIn');
         setPendingUsername(null);
         setConfirmCode('');
+        setCodeExpiresAt(null);
       } else {
         setPendingUsername(result.username);
         setMode('confirm');
+        setCodeExpiresAt(Date.now() + codeTtlMs);
+        setNow(Date.now());
         if (result.delivery) {
           const medium =
             result.delivery.DeliveryMedium === 'EMAIL'
@@ -125,7 +176,7 @@ const LoginScreen: React.FC = () => {
 
   const handleConfirm = async () => {
     resetMessages();
-    const resolvedUsername = pendingUsername?.trim() || username.trim();
+    const resolvedUsername = pendingUsername?.trim() || usernameTrimmed;
     if (!resolvedUsername) {
       setLocalError('회원가입한 아이디를 입력해주세요.');
       return;
@@ -140,6 +191,37 @@ const LoginScreen: React.FC = () => {
       setMode('signIn');
       setConfirmCode('');
       setPendingUsername(null);
+      setCodeExpiresAt(null);
+    } catch (_err) {
+      // handled by auth context
+    }
+  };
+
+  const handleResend = async () => {
+    resetMessages();
+    const resolvedUsername = pendingUsername?.trim() || usernameTrimmed;
+    if (!resolvedUsername) {
+      setLocalError('회원가입한 아이디를 입력해주세요.');
+      return;
+    }
+    try {
+      const delivery = await resendSignUpCode(resolvedUsername);
+      setConfirmCode('');
+      setCodeExpiresAt(Date.now() + codeTtlMs);
+      setNow(Date.now());
+      if (delivery) {
+        const medium =
+          delivery.DeliveryMedium === 'EMAIL'
+            ? '이메일'
+            : delivery.DeliveryMedium === 'SMS'
+              ? 'SMS'
+              : delivery.DeliveryMedium;
+        const destination = delivery.Destination ? ` (${delivery.Destination})` : '';
+        setDeliveryMessage(`${medium}로 인증 코드가 전송되었습니다${destination}.`);
+      } else {
+        setDeliveryMessage('인증 코드가 전송되었습니다.');
+      }
+      setInfoMessage('인증 코드를 입력해주세요.');
     } catch (_err) {
       // handled by auth context
     }
@@ -175,6 +257,24 @@ const LoginScreen: React.FC = () => {
             </View>
           )}
 
+          {mode === 'confirm' && codeExpiresAt && (
+            <View
+              className={`rounded-xl px-3.5 py-3 ${
+                isExpired ? 'bg-rose-50' : 'bg-sky-50'
+              }`}
+            >
+              <Text
+                className={`text-sm font-semibold ${
+                  isExpired ? 'text-rose-600' : 'text-sky-700'
+                }`}
+              >
+                {isExpired
+                  ? '인증 코드 유효시간이 만료되었습니다.'
+                  : `인증 코드 유효시간 ${remainingLabel}`}
+              </Text>
+            </View>
+          )}
+
           <View className="space-y-4">
             {mode !== 'confirm' && (
               <>
@@ -193,7 +293,7 @@ const LoginScreen: React.FC = () => {
                 </View>
                 {mode === 'signUp' && (
                   <View className="space-y-2">
-                    <Text className="text-sm font-bold text-gray-700">이메일 (선택)</Text>
+                    <Text className="text-sm font-bold text-gray-700">이메일</Text>
                     <TextInput
                       value={email}
                       onChangeText={setEmail}
@@ -279,7 +379,9 @@ const LoginScreen: React.FC = () => {
           <Pressable
             className={`rounded-xl py-3.5 ${canSubmit ? 'bg-gray-900' : 'bg-gray-900/40'}`}
             disabled={!canSubmit || isLoading}
-            onPress={mode === 'signIn' ? handleSignIn : mode === 'signUp' ? handleSignUp : handleConfirm}
+            onPress={
+              mode === 'signIn' ? handleSignIn : mode === 'signUp' ? handleSignUp : handleConfirm
+            }
           >
             {isLoading ? (
               <ActivityIndicator color="#fff" />
@@ -287,6 +389,16 @@ const LoginScreen: React.FC = () => {
               <Text className="text-center text-lg font-extrabold text-white">{submitLabel}</Text>
             )}
           </Pressable>
+
+          {mode === 'confirm' && (
+            <Pressable
+              className="items-center"
+              onPress={handleResend}
+              disabled={isLoading}
+            >
+              <Text className="text-sm font-semibold text-gray-600">인증 코드 재전송</Text>
+            </Pressable>
+          )}
 
           {mode === 'signIn' && (
             <Pressable

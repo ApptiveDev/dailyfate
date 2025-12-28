@@ -4,6 +4,7 @@ import {
   AuthError,
   confirmSignUp as confirmSignUpService,
   getAuthToken,
+  resendSignUpCode as resendSignUpCodeService,
   signIn as signInService,
   signOut,
   signUp as signUpService,
@@ -18,6 +19,7 @@ interface AuthContextValue {
   signIn: (username: string, password: string) => Promise<void>;
   signUp: (username: string, password: string, email?: string) => Promise<SignUpResult>;
   confirmSignUp: (username: string, code: string) => Promise<void>;
+  resendSignUpCode: (username: string) => Promise<SignUpResult['delivery']>;
   signOut: () => Promise<void>;
   clearError: () => void;
 }
@@ -112,6 +114,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const resendSignUpCode = useCallback(async (username: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      return await resendSignUpCodeService(username);
+    } catch (err) {
+      if (err instanceof AuthError) {
+        setError(err.message);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('인증 코드 재전송에 실패했습니다.');
+      }
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const handleSignOut = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -136,6 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signIn,
       signUp,
       confirmSignUp,
+      resendSignUpCode,
       signOut: handleSignOut,
       clearError,
     }),
@@ -147,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isBootstrapping,
       isLoading,
       isSignedIn,
+      resendSignUpCode,
       signIn,
       signUp,
     ],

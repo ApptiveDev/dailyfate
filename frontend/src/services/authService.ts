@@ -216,6 +216,31 @@ export const confirmSignUp = async (username: string, code: string) => {
   });
 };
 
+export const resendSignUpCode = async (username: string) => {
+  const trimmedUsername = username.trim();
+  if (!trimmedUsername) {
+    throw new AuthError('아이디를 입력해주세요.');
+  }
+
+  const user = new CognitoUser({
+    Username: trimmedUsername,
+    Pool: getUserPool(),
+  });
+
+  return new Promise<CodeDeliveryDetails | null>((resolve, reject) => {
+    user.resendConfirmationCode(async (error, result) => {
+      if (error) {
+        const message =
+          error instanceof Error ? error.message : '인증 코드 재전송에 실패했습니다.';
+        reject(new AuthError(message));
+        return;
+      }
+      await saveLastUser(trimmedUsername);
+      resolve((result as CodeDeliveryDetails | undefined) ?? null);
+    });
+  });
+};
+
 export const signOut = async () => {
   await Promise.all([saveTokens(null), saveLastUser(null)]);
 };
