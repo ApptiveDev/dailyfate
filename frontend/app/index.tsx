@@ -30,10 +30,11 @@ export default function Home() {
 
   const { isBootstrapping: authBootstrapping, isSignedIn, signOut } = useAuth();
 
-  const { fortune, loading: loadingFortune, error } = useFortune(
-    currentDate,
-    hasOnboarded && !!userSettings && isSignedIn,
-  );
+  const {
+    fortune,
+    loading: loadingFortune,
+    error,
+  } = useFortune(currentDate, hasOnboarded && !!userSettings && isSignedIn);
 
   // Load persisted state
   useEffect(() => {
@@ -87,8 +88,7 @@ export default function Home() {
         await signOut();
         return;
       }
-      const message =
-        error instanceof Error ? error.message : '프로필을 저장하지 못했어요.';
+      const message = error instanceof Error ? error.message : '프로필을 저장하지 못했어요.';
       Alert.alert('프로필 저장 실패', message);
     } finally {
       setProfileSaving(false);
@@ -137,7 +137,7 @@ export default function Home() {
   const showUserForm = needsProfileSetup || (hasOnboarded && !userSettings);
 
   return (
-    <View className="flex-1 bg-stone-200">
+    <View className="flex-1 bg-white">
       {showOnboarding && <Onboarding onComplete={persistHasOnboarded} />}
       {showUserForm && !showOnboarding && (
         <UserInfoForm
