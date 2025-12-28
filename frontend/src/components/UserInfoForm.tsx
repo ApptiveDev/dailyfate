@@ -39,39 +39,39 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
     <SafeAreaView edges={['top']} className="flex-1 bg-white">
       <View className="flex-1 bg-white px-5 py-4">
         <View className="gap-8">
-          <View className="space-y-1">
-            <Text className="text-2xl font-extrabold text-gray-900">
-              반가워요! 정보를 입력해주세요
+          <View className="gap-4">
+            <Text className="text-4xl font-extrabold text-gray-900">
+              반가워요!{'\n'}정보를 입력해주세요
             </Text>
-            <Text className="text-sm text-gray-500">정확한 운세 분석을 위해 필요해요.</Text>
+            <Text className="text-lg text-gray-500">정확한 운세 분석을 위해 필요해요.</Text>
           </View>
 
-          <View className="space-y-2.5">
-            <Text className="text-sm font-bold text-gray-700">닉네임</Text>
+          <View className="gap-4">
+            <Text className="text-xl font-bold text-gray-700">닉네임</Text>
             <TextInput
               value={form.nickname}
               onChangeText={(text) => update({ nickname: text })}
               placeholder="김토스"
               placeholderTextColor="#9ca3af"
-              className="rounded-xl bg-gray-100 px-3.5 py-3.5 text-base text-gray-900"
+              className="rounded-xl bg-gray-100 px-4 py-5 text-xl text-gray-900"
             />
           </View>
 
-          <View className="space-y-2.5">
-            <Text className="text-sm font-bold text-gray-700">성별</Text>
-            <View className="flex-row space-x-2.5">
+          <View className="gap-4">
+            <Text className="text-xl font-bold text-gray-700">성별</Text>
+            <View className="flex-row gap-4">
               {genderOptions.map((opt) => {
                 const active = form.gender === opt.val;
                 return (
                   <Pressable
                     key={opt.val}
-                    className={`flex-1 items-center rounded-xl px-4 py-3 ${
+                    className={`flex-1 items-center rounded-xl p-4 ${
                       active ? 'bg-gray-900' : 'bg-gray-100'
                     }`}
                     onPress={() => update({ gender: opt.val })}
                   >
                     <Text
-                      className={`text-base font-bold ${active ? 'text-white' : 'text-gray-500'}`}
+                      className={`text-lg font-bold ${active ? 'text-white' : 'text-gray-500'}`}
                     >
                       {opt.label}
                     </Text>
@@ -81,19 +81,19 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
             </View>
           </View>
 
-          <View className="space-y-2.5">
-            <Text className="text-sm font-bold text-gray-700">생년월일</Text>
+          <View className="gap-4">
+            <Text className="text-xl font-bold text-gray-700">생년월일</Text>
             <TextInput
               value={form.birthdate}
               onChangeText={(text) => update({ birthdate: text })}
               placeholder="YYYY-MM-DD"
               placeholderTextColor="#9ca3af"
-              className="rounded-xl bg-gray-100 px-3.5 py-3.5 text-base text-gray-900"
+              className="rounded-xl bg-gray-100 px-4 py-5 text-xl text-gray-900"
             />
           </View>
 
-          <View className="space-y-2.5">
-            <Text className="text-sm font-bold text-gray-700">매일 알림</Text>
+          <View className="gap-4">
+            <Text className="text-xl font-bold text-gray-700">매일 알림</Text>
             <View className="flex-row items-center justify-between rounded-xl bg-gray-100 px-3.5 py-3.5">
               <Text className="text-base font-semibold text-gray-900">알림 시간</Text>
               <TextInput
@@ -101,7 +101,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
                 onChangeText={(text) => update({ notificationTime: text })}
                 placeholder="08:00"
                 placeholderTextColor="#9ca3af"
-                className="min-w-[80] text-right text-base text-gray-900"
+                className="rounded-xl bg-gray-100 px-4 py-4 text-xl text-gray-900"
               />
             </View>
           </View>
