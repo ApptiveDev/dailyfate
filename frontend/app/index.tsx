@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useNavigation } from 'expo-router';
 
-import { fetchDailyFortune } from '../src/services/geminiService';
-import { FortuneData, UserSettings } from '@/types';
+import { useFortune } from '@/hooks/useFortune';
+import { UserSettings } from '@/types';
 import Onboarding from '@/components/Onboarding';
 import UserInfoForm from '@/components/UserInfoForm';
 import CalendarPage from '@/components/CalendarPage';
 import SettingsSheet from '@/components/SettingsSheet';
-import { Feather } from '@expo/vector-icons';
+import LoginScreen from '@/components/LoginScreen';
+import { useAuth } from '@/providers/AuthProvider';
+import { ProfileApiError, updateUserProfile } from '@/services/userProfileService';
 
 const HAS_ONBOARDED_KEY = 'hasOnboarded';
 const USER_SETTINGS_KEY = 'userSettings';
@@ -22,9 +24,16 @@ export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
-  const [fortune, setFortune] = useState<FortuneData | null>(null);
-  const [loadingFortune, setLoadingFortune] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+
+  const { isBootstrapping: authBootstrapping, isSignedIn, signOut } = useAuth();
+
+  const { fortune, loading: loadingFortune, error } = useFortune(
+    currentDate,
+    hasOnboarded && !!userSettings && isSignedIn,
+  );
 
   // Load persisted state
   useEffect(() => {
@@ -62,33 +71,39 @@ export default function Home() {
     await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
   };
 
-  // Fortune fetch on date/settings change
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadFortune = async () => {
-      if (!hasOnboarded || !userSettings) return;
-      setLoadingFortune(true);
-      setFortune(null);
-      try {
-        const data = await fetchDailyFortune(currentDate, userSettings);
-        if (isMounted) setFortune(data);
-      } catch (error) {
-        console.warn('Failed to fetch fortune', error);
-        if (isMounted) {
-          Alert.alert('운세를 불러오지 못했어요', '잠시 후 다시 시도해주세요.');
-        }
-      } finally {
-        if (isMounted) setLoadingFortune(false);
+  const handleUserInfoSubmit = async (settings: UserSettings) => {
+    if (profileSaving) return;
+    setProfileSaving(true);
+    try {
+      const updatedSettings = await updateUserProfile(settings);
+      await persistUserSettings(updatedSettings);
+      if (!hasOnboarded) {
+        await persistHasOnboarded();
       }
-    };
+      setNeedsProfileSetup(false);
+    } catch (error) {
+      if (error instanceof ProfileApiError && error.status === 401) {
+        Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
+        await signOut();
+        return;
+      }
+      const message =
+        error instanceof Error ? error.message : '프로필을 저장하지 못했어요.';
+      Alert.alert('프로필 저장 실패', message);
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
-    loadFortune();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentDate, hasOnboarded, userSettings]);
+  useEffect(() => {
+    if (!error) return;
+    if (error.status === 401) {
+      signOut();
+      Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
+      return;
+    }
+    Alert.alert('운세를 불러오지 못했어요', error.message);
+  }, [error, signOut]);
 
   const handleNextDay = useCallback(() => {
     setCurrentDate((prev) => {
@@ -106,7 +121,7 @@ export default function Home() {
     });
   }, []);
 
-  if (bootLoading) {
+  if (bootLoading || authBootstrapping) {
     return (
       <View className="flex-1 items-center justify-center bg-stone-200">
         <ActivityIndicator size="large" color="#191F28" />
@@ -114,14 +129,22 @@ export default function Home() {
     );
   }
 
-  const showOnboarding = !hasOnboarded;
-  const showUserForm = hasOnboarded && !userSettings;
+  if (!isSignedIn) {
+    return <LoginScreen onSignUpSuccess={() => setNeedsProfileSetup(true)} />;
+  }
+
+  const showOnboarding = !hasOnboarded && !needsProfileSetup;
+  const showUserForm = needsProfileSetup || (hasOnboarded && !userSettings);
 
   return (
     <View className="flex-1 bg-stone-200">
       {showOnboarding && <Onboarding onComplete={persistHasOnboarded} />}
       {showUserForm && !showOnboarding && (
-        <UserInfoForm initialValues={userSettings || undefined} onSubmit={persistUserSettings} />
+        <UserInfoForm
+          initialValues={userSettings || undefined}
+          onSubmit={handleUserInfoSubmit}
+          isSubmitting={profileSaving}
+        />
       )}
 
       {!showOnboarding && !showUserForm && (
