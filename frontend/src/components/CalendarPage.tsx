@@ -4,10 +4,12 @@ import {
   Animated,
   Dimensions,
   Easing,
+  GestureResponderEvent,
   PanResponder,
   Pressable,
   ScrollView,
   Text,
+  Vibration,
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -26,6 +28,12 @@ interface Props {
 
 const WEEKDAY_HANJA = ['日', '月', '火', '水', '木', '金', '土'];
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const dayKey = (value: Date) =>
+  value.getFullYear() * 10000 + (value.getMonth() + 1) * 100 + value.getDate();
+const isBeforeDay = (left: Date, right: Date) => dayKey(left) < dayKey(right);
+const EDGE_TRIGGER_RATIO = 0.22;
+const TAP_MOVE_TOLERANCE = 10;
+const TAP_MAX_DURATION_MS = 280;
 
 const CalendarPage: React.FC<Props> = ({
   date,
@@ -45,6 +53,8 @@ const CalendarPage: React.FC<Props> = ({
   const [isTearing, setIsTearing] = useState(false);
   const [trackWidth, setTrackWidth] = useState(0);
   const [pageHeight, setPageHeight] = useState(Dimensions.get('window').height);
+  const [pageWidth, setPageWidth] = useState(Dimensions.get('window').width);
+  const tapStart = useRef<{ x: number; y: number; time: number } | null>(null);
 
   // Reset scroll to top when the date changes
   useEffect(() => {
@@ -79,8 +89,10 @@ const CalendarPage: React.FC<Props> = ({
     };
   }, [bounceAnim]);
 
+  const canGoNext = () => isBeforeDay(date, new Date());
+
   const handleTear = () => {
-    if (isTearing) return;
+    if (isTearing || !canGoNext()) return;
     setIsTearing(true);
 
     Animated.sequence([
@@ -173,6 +185,48 @@ const CalendarPage: React.FC<Props> = ({
     extrapolate: 'clamp',
   });
 
+  const handlePrevTap = () => {
+    if (isTearing) return;
+    Vibration.vibrate(10);
+    onPrev();
+  };
+
+  const handleNextTap = () => {
+    if (isTearing || !canGoNext()) return;
+    onNext();
+  };
+
+  const handleTouchStart = (event: GestureResponderEvent) => {
+    tapStart.current = {
+      x: event.nativeEvent.locationX,
+      y: event.nativeEvent.locationY,
+      time: event.nativeEvent.timestamp,
+    };
+  };
+
+  const handleTouchEnd = (event: GestureResponderEvent) => {
+    const start = tapStart.current;
+    tapStart.current = null;
+    if (!start) return;
+
+    const { locationX, locationY, timestamp } = event.nativeEvent;
+    const dx = locationX - start.x;
+    const dy = locationY - start.y;
+    const distance = Math.hypot(dx, dy);
+    const duration = timestamp - start.time;
+
+    if (distance > TAP_MOVE_TOLERANCE || duration > TAP_MAX_DURATION_MS) return;
+
+    const width = pageWidth || Dimensions.get('window').width;
+    const edgeWidth = width * EDGE_TRIGGER_RATIO;
+
+    if (locationX <= edgeWidth) {
+      handlePrevTap();
+    } else if (locationX >= width - edgeWidth) {
+      handleNextTap();
+    }
+  };
+
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
@@ -189,7 +243,8 @@ const CalendarPage: React.FC<Props> = ({
     onPanResponderRelease: () => {
       scissorX.stopAnimation((value) => {
         const progress = maxDrag ? value / maxDrag : 0;
-        if (!isTearing && progress > 0.9 && maxDrag > 12) {
+        const canAdvance = !isTearing && canGoNext();
+        if (canAdvance && progress > 0.9 && maxDrag > 12) {
           Animated.parallel([
             Animated.timing(scissorX, {
               toValue: maxDrag,
@@ -284,9 +339,14 @@ const CalendarPage: React.FC<Props> = ({
           tearTransform,
         ]}
         onLayout={(e) => {
-          const h = Math.round(e.nativeEvent.layout.height);
+          const { height, width } = e.nativeEvent.layout;
+          const h = Math.round(height);
+          const w = Math.round(width);
           if (h && Math.abs(h - pageHeight) > 2) {
             setPageHeight(h);
+          }
+          if (w && Math.abs(w - pageWidth) > 2) {
+            setPageWidth(w);
           }
         }}
       >
@@ -295,6 +355,11 @@ const CalendarPage: React.FC<Props> = ({
           showsVerticalScrollIndicator={false}
           pagingEnabled
           scrollEventThrottle={16}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={() => {
+            tapStart.current = null;
+          }}
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
             useNativeDriver: true,
           })}
