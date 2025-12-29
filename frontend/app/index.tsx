@@ -57,6 +57,12 @@ export default function Home() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (isSignedIn) return;
+    setIsSettingsOpen(false);
+    setNeedsProfileSetup(false);
+  }, [isSignedIn]);
+
   // Header: show only when main screen is active
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -130,11 +136,11 @@ export default function Home() {
   }
 
   if (!isSignedIn) {
-    return <LoginScreen onSignUpSuccess={() => setNeedsProfileSetup(true)} />;
+    return <LoginScreen />;
   }
 
   const showOnboarding = !hasOnboarded && !needsProfileSetup;
-  const showUserForm = needsProfileSetup || (hasOnboarded && !userSettings);
+  const showUserForm = needsProfileSetup;
 
   return (
     <View className="flex-1 bg-white">
@@ -154,7 +160,13 @@ export default function Home() {
           onPrev={handlePrevDay}
           fortune={fortune}
           loading={loadingFortune}
-          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenSettings={() => {
+            if (userSettings) {
+              setIsSettingsOpen(true);
+            } else {
+              setNeedsProfileSetup(true);
+            }
+          }}
         />
       )}
 
