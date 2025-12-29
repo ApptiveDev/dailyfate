@@ -151,7 +151,7 @@ const WheelPicker: React.FC<{
               className="items-center justify-center"
             >
               <Text
-                className={`${isSelected ? 'text-gray-900' : 'text-gray-400'} ${itemTextClassName}`}
+                className={`${isSelected ? 'text-gray-900' : 'text-gray-400'} ${itemTextClassName} `}
               >
                 {option}
               </Text>
@@ -240,7 +240,7 @@ const DatePickerModal: React.FC<{
           options={yearOptions}
           value={year}
           onChange={onChangeYear}
-          itemTextClassName="text-lg"
+          itemTextClassName="text-xl"
         />
       </View>
       <View className="flex-1 items-center">
@@ -248,7 +248,7 @@ const DatePickerModal: React.FC<{
           options={monthOptions}
           value={month}
           onChange={onChangeMonth}
-          itemTextClassName="text-lg"
+          itemTextClassName="text-xl"
         />
       </View>
       <View className="flex-1 items-center">
@@ -256,7 +256,7 @@ const DatePickerModal: React.FC<{
           options={dayOptions}
           value={day}
           onChange={onChangeDay}
-          itemTextClassName="text-lg"
+          itemTextClassName="text-xl"
         />
       </View>
     </View>
@@ -290,10 +290,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
   );
   const { hour: notifyHour, minute: notifyMinute } = useMemo(
     () =>
-      parseTimeParts(
-        form.notificationTime || DEFAULT_NOTIFICATION_TIME,
-        DEFAULT_NOTIFICATION_TIME,
-      ),
+      parseTimeParts(form.notificationTime || DEFAULT_NOTIFICATION_TIME, DEFAULT_NOTIFICATION_TIME),
     [form.notificationTime],
   );
 
@@ -423,10 +420,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
 
           <View className="gap-4">
             <Text className="text-xl font-bold text-gray-700">생년월일</Text>
-            <Pressable
-              className="rounded-xl bg-gray-100 px-4 py-4"
-              onPress={openBirthDateModal}
-            >
+            <Pressable className="rounded-xl bg-gray-100 px-4 py-4" onPress={openBirthDateModal}>
               <View className="flex-row items-center justify-between">
                 <Text className="text-2xl font-semibold text-gray-900">{birthSummary}</Text>
                 <Text className="text-sm font-semibold text-gray-500">선택</Text>
@@ -436,14 +430,9 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
 
           <View className="gap-4">
             <Text className="text-xl font-bold text-gray-700">태어난 시간</Text>
-            <Pressable
-              className="rounded-xl bg-gray-100 px-4 py-4"
-              onPress={openBirthTimeModal}
-            >
+            <Pressable className="rounded-xl bg-gray-100 px-4 py-4" onPress={openBirthTimeModal}>
               <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-semibold text-gray-900">
-                  {birthTimeSummary}
-                </Text>
+                <Text className="text-lg font-semibold text-gray-900">{birthTimeSummary}</Text>
                 <Text className="text-sm font-semibold text-gray-500">선택</Text>
               </View>
             </Pressable>
@@ -451,14 +440,9 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
 
           <View className="gap-4">
             <Text className="text-xl font-bold text-gray-700">매일 알림</Text>
-            <Pressable
-              className="rounded-xl bg-gray-100 px-4 py-4"
-              onPress={openNotifyModal}
-            >
+            <Pressable className="rounded-xl bg-gray-100 px-4 py-4" onPress={openNotifyModal}>
               <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-semibold text-gray-900">
-                  {notificationSummary}
-                </Text>
+                <Text className="text-lg font-semibold text-gray-900">{notificationSummary}</Text>
                 <Text className="text-sm font-semibold text-gray-500">선택</Text>
               </View>
             </Pressable>
@@ -521,13 +505,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
                   value={birthHour}
                   onChange={(nextHour) =>
                     update({
-                      birthdate: buildBirthDateTime(
-                        year,
-                        month,
-                        day,
-                        nextHour,
-                        birthMinute,
-                      ),
+                      birthdate: buildBirthDateTime(year, month, day, nextHour, birthMinute),
                     })
                   }
                 />
@@ -538,13 +516,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
                   value={birthMinute}
                   onChange={(nextMinute) =>
                     update({
-                      birthdate: buildBirthDateTime(
-                        year,
-                        month,
-                        day,
-                        birthHour,
-                        nextMinute,
-                      ),
+                      birthdate: buildBirthDateTime(year, month, day, birthHour, nextMinute),
                     })
                   }
                 />
