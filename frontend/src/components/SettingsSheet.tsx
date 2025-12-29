@@ -19,6 +19,7 @@ import {
   ProfileApiError,
   updateUserProfile,
 } from '@/services/userProfileService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Props {
   visible: boolean;
@@ -99,6 +100,8 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
     await signOut();
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -107,7 +110,10 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
       >
         <Pressable className="absolute inset-0" onPress={onClose} />
 
-        <View className="gap-4 rounded-t-2xl bg-stone-100 px-4 pb-6 pt-3">
+        <View
+          className="gap-4 rounded-t-2xl bg-stone-100 px-4 pb-6 pt-3 bg-white"
+          style={{ paddingBottom: 24 + insets.bottom }}
+        >
           <View className="flex-row items-center justify-between py-2">
             <View className="flex-row items-center space-x-2">
               <Text className="text-lg font-extrabold text-gray-900">설정</Text>
@@ -122,11 +128,11 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
             </Pressable>
           </View>
 
-          <View className="space-y-2">
+          <View className="gap-4">
             <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               내 정보
             </Text>
-            <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <View className="overflow-hidden rounded-xl border border-gray-200 bg-white ">
               <Row label="닉네임">
                 <TextInput
                   value={form.nickname}
@@ -161,7 +167,7 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
             </View>
           </Pressable>
 
-          <View className="space-y-2">
+          <View className="gap-4">
             <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               계정
             </Text>

@@ -365,7 +365,9 @@ const CalendarPage: React.FC<Props> = ({
           <View style={{ height: pageHeight }} className="relative bg-white px-8 pb-28 pt-6">
             <View className="flex-row items-start justify-between">
               <View>
-                <Text className="font-serif text-xs tracking-[0.25em] text-gray-400">{year}</Text>
+                <Text className="font-serif text-xs tracking-[0.25em] text-gray-400 font-noto">
+                  {year}
+                </Text>
                 <View className="mt-1.5 flex-row items-end">
                   <Text
                     className="font-serif text-4xl font-bold leading-10"
@@ -373,16 +375,21 @@ const CalendarPage: React.FC<Props> = ({
                   >
                     {month}
                   </Text>
-                  <Text className="font-serif mb-1.5 ml-1.5 text-base text-gray-500">월</Text>
+                  <Text className="font-serif mb-1.5 ml-1.5 text-base text-gray-500 font-noto">
+                    월
+                  </Text>
                 </View>
               </View>
 
               <View className="items-end space-y-2">
                 <View className="items-end">
-                  <Text className="font-serif text-3xl font-bold" style={{ color: accentColor }}>
+                  <Text
+                    className="font-serif text-3xl font-bold font-noto"
+                    style={{ color: accentColor }}
+                  >
                     {WEEKDAY_HANJA[weekday]}
                   </Text>
-                  <Text className="font-serif mt-1 text-xs text-gray-400">
+                  <Text className="font-serif mt-1 text-xs text-gray-400 font-noto">
                     {fortune?.lunarDate || '음력 --'}
                   </Text>
                 </View>
@@ -406,8 +413,8 @@ const CalendarPage: React.FC<Props> = ({
                     </Text>
                   </View>
                 ) : fortune ? (
-                  <Text className="text-center font-serif text-lg font-semibold leading-7 text-gray-600">
-                    {fortune.overview}
+                  <Text className="text-center font-serif text-lg font-semibold leading-7 text-gray-600 font-noto">
+                    " {fortune.overview} "
                   </Text>
                 ) : (
                   <Text className="text-center font-serif text-sm text-gray-300">
@@ -432,7 +439,7 @@ const CalendarPage: React.FC<Props> = ({
           >
             <View className="mx-auto flex-1 w-full max-w-xl">
               <View className="mb-3 flex-row items-center opacity-60">
-                <Text className="font-serif text-[11px] font-bold tracking-[0.2em] text-gray-500">
+                <Text className="font-serif text-[11px] font-bold tracking-[0.2em] text-gray-500 font-noto">
                   오늘의 운세
                 </Text>
                 <View className="ml-2 h-px flex-1 bg-gray-300" />
@@ -473,9 +480,9 @@ const FortuneItem: React.FC<FortuneItemProps> = ({ icon, label, value, isLast })
   <View className={`py-4 ${isLast ? '' : 'border-b border-gray-200'}`}>
     <View className="mb-2 flex-row items-center">
       <Feather name={icon} size={20} color="#9ca3af" style={{ marginRight: 10 }} />
-      <Text className="font-serif text-lg font-bold text-gray-900">{label}</Text>
+      <Text className="font-serif text-lg font-bold text-gray-900 font-noto-semibold">{label}</Text>
     </View>
-    <Text className="font-serif text-[15px] leading-6 text-gray-600">{value}</Text>
+    <Text className="font-serif text-[15px] leading-6 text-gray-600 font-noto">{value}</Text>
   </View>
 );
 

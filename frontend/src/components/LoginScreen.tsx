@@ -95,17 +95,17 @@ const LoginScreen: React.FC<Props> = ({ onSignUpSuccess }) => {
   const title = mode === 'signIn' ? '로그인' : '회원가입';
   const description =
     mode === 'signIn'
-      ? '아이디와 비밀번호로 로그인해주세요.'
-      : '아이디와 비밀번호만으로 가입할 수 있어요.';
+      ? '이메일 주소와 비밀번호로 로그인해주세요.'
+      : '이메일 주소와 비밀번호만으로 가입할 수 있어요.';
   const submitLabel = mode === 'signIn' ? '로그인' : '회원가입';
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-stone-200">
-      <View className="flex-1 items-center justify-center px-5 py-6">
-        <View className="w-full max-w-xl gap-6 rounded-2xl bg-white p-5 shadow-2xl shadow-black/10">
-          <View className="space-y-2">
-            <Text className="text-2xl font-extrabold text-gray-900">{title}</Text>
-            <Text className="text-sm text-gray-500">{description}</Text>
+    <SafeAreaView edges={['top']} className="flex-1 bg-white">
+      <View className="p-4 ">
+        <View className="w-full max-w-xl gap-6 rounded-2xl bg-white p-5 ">
+          <View className="gap-4">
+            <Text className="text-4xl font-extrabold text-gray-900">{title}</Text>
+            <Text className="text-xl text-gray-500">{description}</Text>
           </View>
 
           {infoMessage ? (
@@ -114,29 +114,29 @@ const LoginScreen: React.FC<Props> = ({ onSignUpSuccess }) => {
             </View>
           ) : null}
 
-          <View className="space-y-4">
-            <View className="space-y-2">
-              <Text className="text-sm font-bold text-gray-700">아이디</Text>
+          <View className="gap-8">
+            <View className="gap-4">
+              <Text className="text-xl font-bold text-gray-500">이메일 주소</Text>
               <TextInput
                 value={username}
                 onChangeText={setUsername}
-                placeholder="아이디"
+                placeholder="exmaple@mail.com"
                 placeholderTextColor="#9ca3af"
                 autoCapitalize="none"
                 autoCorrect={false}
-                className="rounded-xl bg-gray-100 px-3.5 py-3.5 text-base text-gray-900"
+                className="rounded-xl bg-gray-100 px-4 py-5 text-xl text-gray-900"
                 textContentType="username"
               />
             </View>
-            <View className="space-y-2">
-              <Text className="text-sm font-bold text-gray-700">비밀번호</Text>
+            <View className="gap-4">
+              <Text className="text-xl font-bold text-gray-500">비밀번호</Text>
               <TextInput
                 value={password}
                 onChangeText={setPassword}
-                placeholder="비밀번호"
+                placeholder="⦁⦁⦁⦁⦁⦁⦁⦁⦁"
                 placeholderTextColor="#9ca3af"
                 secureTextEntry
-                className="rounded-xl bg-gray-100 px-3.5 py-3.5 text-base text-gray-900"
+                className="rounded-xl bg-gray-100 px-4 py-5 text-xl text-gray-900"
                 textContentType="password"
               />
             </View>
@@ -149,27 +149,27 @@ const LoginScreen: React.FC<Props> = ({ onSignUpSuccess }) => {
           ) : null}
 
           <Pressable
-            className={`rounded-xl py-3.5 ${canSubmit ? 'bg-gray-900' : 'bg-gray-900/40'}`}
+            className={`rounded-2xl py-5 ${canSubmit ? 'bg-gray-900' : 'bg-gray-900/40'} mt-10`}
             disabled={!canSubmit || isLoading}
             onPress={mode === 'signIn' ? handleSignIn : handleSignUp}
           >
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text className="text-center text-lg font-extrabold text-white">{submitLabel}</Text>
+              <Text className="text-center text-xl font-extrabold text-white">{submitLabel}</Text>
             )}
           </Pressable>
 
           {mode === 'signIn' && (
-            <Pressable className="items-center" onPress={() => handleModeChange('signUp')}>
-              <Text className="text-sm font-semibold text-gray-600">
+            <Pressable className="items-center mt-4" onPress={() => handleModeChange('signUp')}>
+              <Text className="text-lg font-semibold text-gray-600">
                 아직 계정이 없나요? 회원가입
               </Text>
             </Pressable>
           )}
 
           {mode === 'signUp' && (
-            <Pressable className="items-center" onPress={() => handleModeChange('signIn')}>
+            <Pressable className="items-center mt-4" onPress={() => handleModeChange('signIn')}>
               <Text className="text-sm font-semibold text-gray-600">
                 이미 계정이 있나요? 로그인
               </Text>
