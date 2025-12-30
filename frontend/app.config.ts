@@ -9,7 +9,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // ===== App 기본 정보 =====
   name: '운세한장',
   slug: 'dailyfate',
-  version: '1.0.2',
+  version: '1.0.3',
 
   // ===== 환경 변수 =====
   extra: {
