@@ -9,7 +9,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // ===== App 기본 정보 =====
   name: '운세한장',
   slug: 'dailyfate',
-  version: '1.0.2',
+  version: '1.0.3',
 
   // ===== 환경 변수 =====
   extra: {
@@ -55,7 +55,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...config.android,
     package: 'com.dailyfate.frontend',
 
-    // @ts-ignore — Expo에서 실제 지원하는 속성
+    // @ts-expect-error - Expo config type does not include `label` yet.
     label: '운세한장',
 
     adaptiveIcon: {

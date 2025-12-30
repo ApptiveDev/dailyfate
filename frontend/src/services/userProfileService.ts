@@ -47,10 +47,10 @@ const readPayload = async <T>(response: Response) => {
     if (!rawText) return { payload: null, rawText: null };
     try {
       return { payload: JSON.parse(rawText) as T, rawText };
-    } catch (_error) {
+    } catch {
       return { payload: null, rawText };
     }
-  } catch (_error) {
+  } catch {
     return { payload: null, rawText: null };
   }
 };

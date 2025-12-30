@@ -39,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const token = await getAuthToken();
         if (active) setIsSignedIn(Boolean(token));
-      } catch (_err) {
+      } catch {
         if (active) setIsSignedIn(false);
       } finally {
         if (active) setIsBootstrapping(false);

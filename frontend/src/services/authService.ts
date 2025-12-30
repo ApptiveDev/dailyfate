@@ -98,7 +98,7 @@ const loadCache = async () => {
   if (tokenRaw) {
     try {
       cachedTokens = JSON.parse(tokenRaw) as AuthTokens;
-    } catch (_err) {
+    } catch {
       cachedTokens = null;
     }
   } else {

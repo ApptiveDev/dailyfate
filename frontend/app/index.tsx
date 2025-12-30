@@ -26,15 +26,19 @@ export default function Home() {
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
 
   const { isBootstrapping: authBootstrapping, isSignedIn, signOut } = useAuth();
+
+  const canLoadFortune =
+    isSignedIn && !!userSettings && !needsProfileSetup && (!needsOnboarding || hasOnboarded);
 
   const {
     fortune,
     loading: loadingFortune,
     error,
-  } = useFortune(currentDate, hasOnboarded && !!userSettings && isSignedIn);
+  } = useFortune(currentDate, canLoadFortune);
 
   // Load persisted state
   useEffect(() => {
@@ -61,6 +65,7 @@ export default function Home() {
     if (isSignedIn) return;
     setIsSettingsOpen(false);
     setNeedsProfileSetup(false);
+    setNeedsOnboarding(false);
   }, [isSignedIn]);
 
   // Header: show only when main screen is active
@@ -78,15 +83,22 @@ export default function Home() {
     await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
   };
 
+  const handleSignUpSuccess = useCallback(() => {
+    setNeedsProfileSetup(true);
+    setNeedsOnboarding(true);
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    setNeedsOnboarding(false);
+    void persistHasOnboarded();
+  };
+
   const handleUserInfoSubmit = async (settings: UserSettings) => {
     if (profileSaving) return;
     setProfileSaving(true);
     try {
       const updatedSettings = await updateUserProfile(settings);
       await persistUserSettings(updatedSettings);
-      if (!hasOnboarded) {
-        await persistHasOnboarded();
-      }
       setNeedsProfileSetup(false);
     } catch (error) {
       if (error instanceof ProfileApiError && error.status === 401) {
@@ -136,15 +148,15 @@ export default function Home() {
   }
 
   if (!isSignedIn) {
-    return <LoginScreen />;
+    return <LoginScreen onSignUpSuccess={handleSignUpSuccess} />;
   }
 
-  const showOnboarding = !hasOnboarded && !needsProfileSetup;
+  const showOnboarding = needsOnboarding && !needsProfileSetup;
   const showUserForm = needsProfileSetup;
 
   return (
     <View className="flex-1 bg-white">
-      {showOnboarding && <Onboarding onComplete={persistHasOnboarded} />}
+      {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
       {showUserForm && !showOnboarding && (
         <UserInfoForm
           initialValues={userSettings || undefined}

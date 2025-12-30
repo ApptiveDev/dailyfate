@@ -6,7 +6,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  Switch,
   Text,
   TextInput,
   View,
