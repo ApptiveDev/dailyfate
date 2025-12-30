@@ -8,6 +8,11 @@ const prettierConfig = require('eslint-config-prettier');
 const runtimeGlobals = {
   console: 'readonly',
   process: 'readonly',
+  fetch: 'readonly',
+  Headers: 'readonly',
+  Request: 'readonly',
+  Response: 'readonly',
+  AbortController: 'readonly',
   setTimeout: 'readonly',
   clearTimeout: 'readonly',
   setInterval: 'readonly',

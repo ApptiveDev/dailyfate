@@ -50,10 +50,10 @@ const readPayload = async (response: Response) => {
     if (!rawText) return { payload: null, rawText: null };
     try {
       return { payload: JSON.parse(rawText) as FortuneApiResponse, rawText };
-    } catch (_error) {
+    } catch {
       return { payload: null, rawText };
     }
-  } catch (_error) {
+  } catch {
     return { payload: null, rawText: null };
   }
 };

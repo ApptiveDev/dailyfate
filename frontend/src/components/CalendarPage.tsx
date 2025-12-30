@@ -414,7 +414,7 @@ const CalendarPage: React.FC<Props> = ({
                   </View>
                 ) : fortune ? (
                   <Text className="text-center font-serif text-lg font-semibold leading-7 text-gray-600 font-noto">
-                    " {fortune.overview} "
+                    &quot; {fortune.overview} &quot;
                   </Text>
                 ) : (
                   <Text className="text-center font-serif text-sm text-gray-300">
