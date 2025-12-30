@@ -78,6 +78,10 @@ export default function Home() {
     await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
   };
 
+  const handleSignUpSuccess = useCallback(() => {
+    setNeedsProfileSetup(true);
+  }, []);
+
   const handleUserInfoSubmit = async (settings: UserSettings) => {
     if (profileSaving) return;
     setProfileSaving(true);
@@ -136,7 +140,7 @@ export default function Home() {
   }
 
   if (!isSignedIn) {
-    return <LoginScreen />;
+    return <LoginScreen onSignUpSuccess={handleSignUpSuccess} />;
   }
 
   const showOnboarding = !hasOnboarded && !needsProfileSetup;

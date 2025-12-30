@@ -20,7 +20,6 @@ interface Props {
 const genderOptions: { val: Gender; label: string }[] = [
   { val: 'male', label: '남성' },
   { val: 'female', label: '여성' },
-  { val: 'other', label: '기타' },
 ];
 
 const ITEM_HEIGHT = 36;
