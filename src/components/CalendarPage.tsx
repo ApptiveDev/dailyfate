@@ -361,6 +361,9 @@ const CalendarPage: React.FC<Props> = ({
           onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
             useNativeDriver: true,
           })}
+          contentContainerStyle={{
+            paddingBottom: 40, // 👈 원하는 만큼
+          }}
         >
           <View style={{ height: pageHeight }} className="relative bg-white px-8 pb-28 pt-6">
             <View className="flex-row items-start justify-between">
@@ -397,7 +400,7 @@ const CalendarPage: React.FC<Props> = ({
                 {day}
               </Text>
 
-              <View className="mt-6 w-full max-w-xl px-6">
+              <View className="mt-6 w-full max-w-xl px-2">
                 {loading ? (
                   <View className="items-center">
                     <ActivityIndicator size="small" color="#d1d5db" />
@@ -406,7 +409,7 @@ const CalendarPage: React.FC<Props> = ({
                     </Text>
                   </View>
                 ) : fortune ? (
-                  <Text className="text-center  text-lg font-semibold leading-7 text-gray-600 font-noto">
+                  <Text className="text-center text-lg font-semibold leading-7 text-gray-600 font-noto">
                     &quot; {fortune.overview} &quot;
                   </Text>
                 ) : (
