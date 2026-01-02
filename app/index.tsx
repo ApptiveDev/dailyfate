@@ -12,6 +12,7 @@ import CalendarPage from '@/components/CalendarPage';
 import SettingsSheet from '@/components/SettingsSheet';
 import LoginScreen from '@/components/LoginScreen';
 import { useAuth } from '@/providers/AuthProvider';
+import { registerForPushNotificationsAsync } from '@/services/pushNotifications';
 import { ProfileApiError, updateUserProfile } from '@/services/userProfileService';
 
 const HAS_ONBOARDED_KEY = 'hasOnboarded';
@@ -59,6 +60,21 @@ export default function Home() {
     };
 
     load();
+  }, []);
+
+  useEffect(() => {
+    const registerPushToken = async () => {
+      try {
+        const token = await registerForPushNotificationsAsync();
+        if (token) {
+          console.log('Expo push token:', token);
+        }
+      } catch (error) {
+        console.warn('Failed to register for push notifications', error);
+      }
+    };
+
+    registerPushToken();
   }, []);
 
   useEffect(() => {
