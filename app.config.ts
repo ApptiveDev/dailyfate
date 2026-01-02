@@ -73,5 +73,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   // ===== 기타 =====
   scheme: 'frontend',
-  plugins: ['expo-router'],
+  plugins: [
+    'expo-router',
+    [
+      'expo-notifications',
+      {
+        mode: 'development',
+      },
+    ],
+  ],
 });

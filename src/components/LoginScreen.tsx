@@ -9,9 +9,10 @@ type AuthMode = 'signIn' | 'signUp';
 
 interface Props {
   onSignUpSuccess?: () => void;
+  onSignInSuccess?: () => void;
 }
 
-const LoginScreen: React.FC<Props> = ({ onSignUpSuccess }) => {
+const LoginScreen: React.FC<Props> = ({ onSignUpSuccess, onSignInSuccess }) => {
   const { signIn, signUp, isLoading, error, clearError } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signIn');
   const [username, setUsername] = useState('');
@@ -47,6 +48,7 @@ const LoginScreen: React.FC<Props> = ({ onSignUpSuccess }) => {
     }
     try {
       await signIn(usernameTrimmed, password);
+      onSignInSuccess?.();
     } catch (err) {
       if (err instanceof AuthError && err.code === 'UserNotConfirmedException') {
         clearError();

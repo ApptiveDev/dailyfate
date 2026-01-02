@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   AuthenticationDetails,
+  CognitoRefreshToken,
   CognitoUser,
   CognitoUserAttribute,
   CognitoUserPool,
@@ -26,6 +27,7 @@ export interface AuthTokens {
   refreshToken: string;
   accessTokenExp: number;
   idTokenExp: number;
+  refreshTokenExp?: number;
 }
 
 export interface SignUpResult {
@@ -37,6 +39,7 @@ export interface SignUpResult {
 const AUTH_TOKENS_KEY = 'authTokens';
 const AUTH_LAST_USER_KEY = 'authLastUser';
 const TOKEN_EXPIRY_LEEWAY_MS = 60_000;
+const REFRESH_TOKEN_EXPIRY_MS = 5 * 24 * 60 * 60 * 1000;
 
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   UsernameExistsException: '이미 가입된 아이디입니다. 로그인해주세요.',
@@ -53,6 +56,8 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
 let cachedTokens: AuthTokens | null = null;
 let cachedUser: string | null = null;
 let cacheLoaded = false;
+let refreshPromise: Promise<AuthTokens | null> | null = null;
+let authSessionVersion = 0;
 
 const getErrorCode = (error: unknown) => {
   if (!error || typeof error !== 'object') return undefined;
@@ -81,13 +86,26 @@ const getUserPool = () => {
   });
 };
 
-const mapSessionTokens = (session: CognitoUserSession): AuthTokens => ({
-  accessToken: session.getAccessToken().getJwtToken(),
-  idToken: session.getIdToken().getJwtToken(),
-  refreshToken: session.getRefreshToken().getToken(),
-  accessTokenExp: session.getAccessToken().getExpiration() * 1000,
-  idTokenExp: session.getIdToken().getExpiration() * 1000,
-});
+const mapSessionTokens = (
+  session: CognitoUserSession,
+  previousTokens?: AuthTokens | null,
+): AuthTokens => {
+  const refreshToken =
+    session.getRefreshToken().getToken() || previousTokens?.refreshToken || '';
+  const refreshTokenExp =
+    previousTokens?.refreshToken === refreshToken && previousTokens.refreshTokenExp
+      ? previousTokens.refreshTokenExp
+      : Date.now() + REFRESH_TOKEN_EXPIRY_MS;
+
+  return {
+    accessToken: session.getAccessToken().getJwtToken(),
+    idToken: session.getIdToken().getJwtToken(),
+    refreshToken,
+    accessTokenExp: session.getAccessToken().getExpiration() * 1000,
+    idTokenExp: session.getIdToken().getExpiration() * 1000,
+    refreshTokenExp,
+  };
+};
 
 const loadCache = async () => {
   if (cacheLoaded) return;
@@ -129,6 +147,20 @@ const saveLastUser = async (username: string | null) => {
 
 const isExpired = (exp: number) => Date.now() > exp - TOKEN_EXPIRY_LEEWAY_MS;
 
+const isTokenValid = (exp?: number) => Boolean(exp && !isExpired(exp));
+
+const hasValidAccessToken = (tokens: AuthTokens | null) =>
+  Boolean(tokens?.accessToken && isTokenValid(tokens.accessTokenExp));
+
+const hasValidIdToken = (tokens: AuthTokens | null) =>
+  Boolean(tokens?.idToken && isTokenValid(tokens.idTokenExp));
+
+const shouldRefreshTokens = (tokens: AuthTokens | null) =>
+  Boolean(tokens && (!hasValidAccessToken(tokens) || !hasValidIdToken(tokens)));
+
+const isRefreshTokenExpired = (tokens: AuthTokens | null) =>
+  Boolean(tokens?.refreshTokenExp && isExpired(tokens.refreshTokenExp));
+
 const pickToken = (tokens: AuthTokens | null) => {
   if (!tokens) return null;
   const useIdToken = COGNITO_CONFIG.TOKEN_USE === 'id';
@@ -136,6 +168,60 @@ const pickToken = (tokens: AuthTokens | null) => {
   const exp = useIdToken ? tokens.idTokenExp : tokens.accessTokenExp;
   if (!exp || isExpired(exp)) return null;
   return token;
+};
+
+const REFRESH_TOKEN_FAILURE_CODES = new Set([
+  'NotAuthorizedException',
+  'InvalidParameterException',
+  'UserNotFoundException',
+]);
+
+const shouldClearSessionOnRefreshError = (error: unknown) => {
+  const code = getErrorCode(error);
+  return code ? REFRESH_TOKEN_FAILURE_CODES.has(code) : false;
+};
+
+const refreshTokens = async () => {
+  await loadCache();
+  if (!cachedTokens?.refreshToken || !cachedUser) return null;
+  if (refreshPromise) return refreshPromise;
+
+  const refreshTokenValue = cachedTokens.refreshToken;
+  const username = cachedUser;
+  const sessionVersion = authSessionVersion;
+
+  const promise = new Promise<AuthTokens | null>((resolve, reject) => {
+    const user = new CognitoUser({
+      Username: username,
+      Pool: getUserPool(),
+    });
+    const refreshToken = new CognitoRefreshToken({ RefreshToken: refreshTokenValue });
+
+    user.refreshSession(refreshToken, async (error, session) => {
+      if (error || !session) {
+        reject(buildAuthError(error, '세션 갱신에 실패했습니다.'));
+        return;
+      }
+      if (sessionVersion !== authSessionVersion) {
+        resolve(null);
+        return;
+      }
+      try {
+        const tokens = mapSessionTokens(session, cachedTokens);
+        await saveTokens(tokens);
+        resolve(tokens);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+
+  refreshPromise = promise;
+  promise.finally(() => {
+    refreshPromise = null;
+  });
+
+  return promise;
 };
 
 export const getStoredTokens = async () => {
@@ -150,8 +236,31 @@ export const getLastUsername = async () => {
 
 export const getAuthToken = async () => {
   await loadCache();
-  const storedToken = pickToken(cachedTokens);
-  if (storedToken) return storedToken;
+  const storedTokens = cachedTokens;
+  const storedToken = pickToken(storedTokens);
+  const needsRefresh = shouldRefreshTokens(storedTokens);
+
+  if (storedToken && !needsRefresh) return storedToken;
+
+  if (storedTokens?.refreshToken && cachedUser) {
+    if (isRefreshTokenExpired(storedTokens)) {
+      await signOut();
+      return API_CONFIG.AUTH_TOKEN || null;
+    }
+    try {
+      const refreshedTokens = await refreshTokens();
+      const refreshedToken = pickToken(refreshedTokens);
+      if (refreshedToken) return refreshedToken;
+    } catch (error) {
+      if (shouldClearSessionOnRefreshError(error)) {
+        await signOut();
+        return API_CONFIG.AUTH_TOKEN || null;
+      }
+    }
+
+    if (storedToken) return storedToken;
+  }
+
   return API_CONFIG.AUTH_TOKEN || null;
 };
 
@@ -265,5 +374,6 @@ export const resendSignUpCode = async (username: string) => {
 };
 
 export const signOut = async () => {
+  authSessionVersion += 1;
   await Promise.all([saveTokens(null), saveLastUser(null)]);
 };
