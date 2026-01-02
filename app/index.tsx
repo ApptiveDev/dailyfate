@@ -104,6 +104,10 @@ export default function Home() {
     setNeedsOnboarding(true);
   }, []);
 
+  const handleSignInSuccess = useCallback(() => {
+    setNeedsProfileSetup(true);
+  }, []);
+
   const handleOnboardingComplete = () => {
     setNeedsOnboarding(false);
     void persistHasOnboarded();
@@ -164,7 +168,12 @@ export default function Home() {
   }
 
   if (!isSignedIn) {
-    return <LoginScreen onSignUpSuccess={handleSignUpSuccess} />;
+    return (
+      <LoginScreen
+        onSignUpSuccess={handleSignUpSuccess}
+        onSignInSuccess={handleSignInSuccess}
+      />
+    );
   }
 
   const showOnboarding = needsOnboarding && !needsProfileSetup;
