@@ -456,19 +456,37 @@ const CalendarPage: React.FC<Props> = ({
             className="border-t border-dashed border-gray-200 bg-gray-50 p-8"
           >
             <View className="mx-auto flex-1 w-full max-w-xl ">
-              <View className="mb-3 flex-row items-center opacity-60">
-                <Text className=" text-[11px] font-bold tracking-[0.2em] text-gray-500 font-wanted-semibold">
-                  오늘의 운세
-                </Text>
-                <View className="ml-2 h-px flex-1 bg-gray-300" />
-              </View>
-
               {fortune ? (
                 <>
-                  <FortuneItem icon="dollar-sign" label="재물운" value={fortune.wealth} />
-                  <FortuneItem icon="heart" label="애정운" value={fortune.love} />
-                  <FortuneItem icon="award" label="성공운" value={fortune.success} />
-                  <FortuneItem icon="zap" label="추천 행동" value={fortune.action} isLast />
+                  <FortuneItem 
+                    icon="dollar-sign" 
+                    label="재물운" 
+                    value={fortune.wealth}
+                    iconColor="#d97706"
+                    bgColor="#fef3c7"
+                  />
+                  <FortuneItem 
+                    icon="heart" 
+                    label="애정운" 
+                    value={fortune.love}
+                    iconColor="#dc2626"
+                    bgColor="#fee2e2"
+                  />
+                  <FortuneItem 
+                    icon="award" 
+                    label="성공운" 
+                    value={fortune.success}
+                    iconColor="#7c3aed"
+                    bgColor="#ede9fe"
+                  />
+                  <FortuneItem 
+                    icon="zap" 
+                    label="추천 행동" 
+                    value={fortune.action}
+                    iconColor="#059669"
+                    bgColor="#d1fae5"
+                    isLast 
+                  />
                 </>
               ) : (
                 <View className="py-5">
@@ -489,16 +507,23 @@ interface FortuneItemProps {
   icon: React.ComponentProps<typeof Feather>['name'];
   label: string;
   value: string;
+  iconColor: string;
+  bgColor: string;
   isLast?: boolean;
 }
 
-const FortuneItem: React.FC<FortuneItemProps> = ({ icon, label, value, isLast }) => (
+const FortuneItem: React.FC<FortuneItemProps> = ({ icon, label, value, iconColor, bgColor, isLast }) => (
   <View className={`py-4 ${isLast ? '' : 'border-b border-gray-200'}`}>
     <View className="mb-2 flex-row items-center">
-      <Feather name={icon} size={20} color="#9ca3af" style={{ marginRight: 10 }} />
-      <Text className=" text-lg font-bold text-gray-900 font-wanted-semibold">{label}</Text>
+      <View 
+        className="mr-3 h-9 w-9 items-center justify-center rounded-full"
+        style={{ backgroundColor: bgColor }}
+      >
+        <Feather name={icon} size={18} color={iconColor} />
+      </View>
+      <Text className=" text-lg font-bold text-gray-900 font-wanted-regular">{label}</Text>
     </View>
-    <Text className=" text-[15px] leading-6 text-gray-600 font-wanted-semibold">{value}</Text>
+    <Text className=" text-[15px] leading-7 text-gray-600 font-wanted-regular">{value}</Text>
   </View>
 );
 
