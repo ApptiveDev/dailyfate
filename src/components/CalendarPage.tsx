@@ -447,7 +447,7 @@ const CalendarPage: React.FC<Props> = ({
               className="absolute inset-x-0 bottom-20 items-center"
             >
               <Feather name="chevron-down" size={28} color="#d1d5db" />
-              <Text className=" font-serif text-gray-500">운세보러가기</Text>
+              <Text className=" font-wanted-semibold text-gray-500">운세 보러가기</Text>
             </Animated.View>
           </View>
 
