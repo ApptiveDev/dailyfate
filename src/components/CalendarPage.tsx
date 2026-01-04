@@ -458,6 +458,13 @@ const CalendarPage: React.FC<Props> = ({
             className="border-t border-dashed border-gray-200 bg-gray-50 p-8"
           >
             <View className="mx-auto flex-1 w-full max-w-xl ">
+              <View className="mb-3 flex-row items-center opacity-60">
+                <Text className=" text-[11px] font-bold tracking-[0.2em] text-gray-500 font-wanted-semibold">
+                  오늘의 운세
+                </Text>
+                <View className="ml-2 h-px flex-1 bg-gray-300" />
+              </View>
+
               {fortune ? (
                 <>
                   <FortuneItem 
