@@ -9,6 +9,7 @@ module.exports = {
         'noto-semibold': ['NotoSerifKR_600SemiBold'],
         'noto-bold': ['NotoSerifKR_700Bold'],
         'noto-extrabold': ['NotoSerifKR_800ExtraBold'],
+        'wanted-semibold': ['WantedSans-SemiBold'],
       },
     },
   },
