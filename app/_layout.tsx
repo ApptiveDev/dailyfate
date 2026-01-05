@@ -17,6 +17,8 @@ export default function RootLayout() {
     NotoSerifKR_600SemiBold,
     NotoSerifKR_700Bold,
     NotoSerifKR_800ExtraBold,
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef
+    'WantedSans-SemiBold': require('../assets/fonts/WantedSans-SemiBold.ttf'),
   });
 
   if (!fontsLoaded) {

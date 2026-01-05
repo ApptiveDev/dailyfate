@@ -125,7 +125,6 @@ const CalendarPage: React.FC<Props> = ({
     });
   };
 
-  const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
   const weekday = date.getDay();
@@ -368,31 +367,39 @@ const CalendarPage: React.FC<Props> = ({
           <View style={{ height: pageHeight }} className="relative bg-white px-8 pb-28 pt-6">
             <View className="flex-row items-start justify-between">
               <View>
-                <Text className=" text-xs tracking-[0.25em] text-gray-400 font-noto">{year}</Text>
-                <View className="mt-1.5 flex-row items-end">
+                <View className="flex-row items-end">
                   <Text
                     className="font-serif text-4xl font-bold leading-10"
                     style={{ color: accentColor }}
                   >
                     {month}
                   </Text>
-                  <Text className="mb-1.5 ml-1.5 text-base text-gray-500 font-noto">월</Text>
+                  <Text className="mb-1.5 ml-1.5 text-base text-gray-500 font-wanted-semibold">월</Text>
                 </View>
               </View>
 
               <View className="items-end space-y-2">
                 <View className="items-end">
-                  <Text className=" text-3xl font-bold font-noto" style={{ color: accentColor }}>
+                  <Text className=" text-3xl font-wanted-semibold" style={{ color: accentColor }}>
                     {WEEKDAY_HANJA[weekday]}
                   </Text>
-                  <Text className=" mt-1 text-xs text-gray-400 font-noto">
-                    {fortune?.lunarDate || '음력 --'}
+                  <Text className=" mt-1 text-xs text-gray-400 font-wanted-semibold">
+                    {/* 음력 정보 포맷팅 */}
+                    {fortune?.lunarDate
+                      ? (() => {
+                          const parts = fortune.lunarDate.split('-');
+                          if (parts.length === 3) {
+                            return `음력 ${parts[1]}/${parts[2]}`;
+                          }
+                          return `음력 ${fortune.lunarDate}`;
+                        })()
+                      : '음력 --'}
                   </Text>
                 </View>
               </View>
             </View>
 
-            <View className="flex-1 items-center" style={{ marginTop: '20%' }}>
+            <View className="flex-1 items-center" style={{ marginTop: '15%' }}>
               <Text
                 className="font-serif text-[148px] font-extrabold leading-[148px] tracking-[-0.04em]"
                 style={{ color: accentColor }}
@@ -400,7 +407,7 @@ const CalendarPage: React.FC<Props> = ({
                 {day}
               </Text>
 
-              <View className="mt-6 w-full max-w-xl px-2">
+              <View className="mt-12 w-full max-w-xl px-4">
                 {loading ? (
                   <View className="items-center">
                     <ActivityIndicator size="small" color="#d1d5db" />
@@ -409,9 +416,24 @@ const CalendarPage: React.FC<Props> = ({
                     </Text>
                   </View>
                 ) : fortune ? (
-                  <Text className="text-center text-lg font-semibold leading-7 text-gray-600 font-noto">
-                    &quot; {fortune.overview} &quot;
-                  </Text>
+                  <View className="relative items-center" style={{ minHeight: 7 * 36 }}>
+                    {/* 노트 줄 배경 */}
+                    <View className="absolute inset-0">
+                      {Array.from({ length: 7 }).map((_, i) => (
+                        <View
+                          key={i}
+                          className="absolute w-full border-t border-gray-200"
+                          style={{ top: i * 36 }}
+                        />
+                      ))}
+                    </View>
+                    <Text
+                      className="relative text-center text-lg font-medium text-gray-700 font-wanted-semibold"
+                      style={{ lineHeight: 36 }}
+                    >
+                      {fortune.overview}
+                    </Text>
+                  </View>
                 ) : (
                   <Text className="text-center font-serif text-sm text-gray-300">
                     운세 정보가 없습니다.
@@ -425,7 +447,7 @@ const CalendarPage: React.FC<Props> = ({
               className="absolute inset-x-0 bottom-20 items-center"
             >
               <Feather name="chevron-down" size={28} color="#d1d5db" />
-              <Text className=" font-serif text-gray-500">운세보러가기</Text>
+              <Text className=" font-wanted-semibold text-gray-500">운세 보러가기</Text>
             </Animated.View>
           </View>
 
@@ -434,19 +456,37 @@ const CalendarPage: React.FC<Props> = ({
             className="border-t border-dashed border-gray-200 bg-gray-50 p-8"
           >
             <View className="mx-auto flex-1 w-full max-w-xl ">
-              <View className="mb-3 flex-row items-center opacity-60">
-                <Text className=" text-[11px] font-bold tracking-[0.2em] text-gray-500 font-noto">
-                  오늘의 운세
-                </Text>
-                <View className="ml-2 h-px flex-1 bg-gray-300" />
-              </View>
-
               {fortune ? (
                 <>
-                  <FortuneItem icon="dollar-sign" label="재물운" value={fortune.wealth} />
-                  <FortuneItem icon="heart" label="애정운" value={fortune.love} />
-                  <FortuneItem icon="award" label="성공운" value={fortune.success} />
-                  <FortuneItem icon="zap" label="추천 행동" value={fortune.action} isLast />
+                  <FortuneItem 
+                    icon="dollar-sign" 
+                    label="재물운" 
+                    value={fortune.wealth}
+                    iconColor="#d97706"
+                    bgColor="#fef3c7"
+                  />
+                  <FortuneItem 
+                    icon="heart" 
+                    label="애정운" 
+                    value={fortune.love}
+                    iconColor="#dc2626"
+                    bgColor="#fee2e2"
+                  />
+                  <FortuneItem 
+                    icon="award" 
+                    label="성공운" 
+                    value={fortune.success}
+                    iconColor="#7c3aed"
+                    bgColor="#ede9fe"
+                  />
+                  <FortuneItem 
+                    icon="zap" 
+                    label="추천 행동" 
+                    value={fortune.action}
+                    iconColor="#059669"
+                    bgColor="#d1fae5"
+                    isLast 
+                  />
                 </>
               ) : (
                 <View className="py-5">
@@ -467,16 +507,23 @@ interface FortuneItemProps {
   icon: React.ComponentProps<typeof Feather>['name'];
   label: string;
   value: string;
+  iconColor: string;
+  bgColor: string;
   isLast?: boolean;
 }
 
-const FortuneItem: React.FC<FortuneItemProps> = ({ icon, label, value, isLast }) => (
+const FortuneItem: React.FC<FortuneItemProps> = ({ icon, label, value, iconColor, bgColor, isLast }) => (
   <View className={`py-4 ${isLast ? '' : 'border-b border-gray-200'}`}>
     <View className="mb-2 flex-row items-center">
-      <Feather name={icon} size={20} color="#9ca3af" style={{ marginRight: 10 }} />
-      <Text className=" text-lg font-bold text-gray-900 font-noto-semibold">{label}</Text>
+      <View 
+        className="mr-3 h-9 w-9 items-center justify-center rounded-full"
+        style={{ backgroundColor: bgColor }}
+      >
+        <Feather name={icon} size={18} color={iconColor} />
+      </View>
+      <Text className=" text-lg font-bold text-gray-900 font-wanted-regular">{label}</Text>
     </View>
-    <Text className=" text-[15px] leading-6 text-gray-600 font-noto">{value}</Text>
+    <Text className=" text-[15px] leading-7 text-gray-600 font-wanted-regular">{value}</Text>
   </View>
 );
 
