@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Alert, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useNavigation } from 'expo-router';
@@ -13,6 +13,7 @@ import SettingsSheet from '@/components/SettingsSheet';
 import LoginScreen from '@/components/LoginScreen';
 import { useAuth } from '@/providers/AuthProvider';
 import { registerForPushNotificationsAsync } from '@/services/pushNotifications';
+import { updatePushToken } from '@/services/pushTokenService';
 import { ProfileApiError, updateUserProfile } from '@/services/userProfileService';
 
 const HAS_ONBOARDED_KEY = 'hasOnboarded';
@@ -29,6 +30,7 @@ export default function Home() {
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [pushToken, setPushToken] = useState<string | null>(null);
 
   const { isBootstrapping: authBootstrapping, isSignedIn, signOut } = useAuth();
 
@@ -63,11 +65,16 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+
     const registerPushToken = async () => {
       try {
         const token = await registerForPushNotificationsAsync();
         if (token) {
           console.log('Expo push token:', token);
+          if (active) {
+            setPushToken(token);
+          }
         }
       } catch (error) {
         console.warn('Failed to register for push notifications', error);
@@ -75,7 +82,29 @@ export default function Home() {
     };
 
     registerPushToken();
+
+    return () => {
+      active = false;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!isSignedIn || !pushToken) return;
+
+    const platform = Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : null;
+    if (!platform) return;
+
+    const syncPushToken = async () => {
+      try {
+        const result = await updatePushToken({ pushToken, platform });
+        console.log('Push token synced:', result);
+      } catch (error) {
+        console.warn('Failed to sync push token', error);
+      }
+    };
+
+    syncPushToken();
+  }, [isSignedIn, pushToken]);
 
   useEffect(() => {
     if (isSignedIn) return;
