@@ -26,6 +26,8 @@ interface Props {
   onClose: () => void;
   settings: UserSettings;
   onSave: (settings: UserSettings) => void;
+  onLogout: () => void;
+  onUnauthorized: () => void;
 }
 
 const ITEM_HEIGHT = 36;
@@ -157,12 +159,19 @@ const PickerModal: React.FC<{
   </Modal>
 );
 
-const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) => {
+const SettingsSheet: React.FC<Props> = ({
+  visible,
+  onClose,
+  settings,
+  onSave,
+  onLogout,
+  onUnauthorized,
+}) => {
   const [form, setForm] = useState<UserSettings>(settings);
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
-  const { signOut, isLoading } = useAuth();
+  const { isLoading } = useAuth();
   const isBusy = isFetching || isSaving;
 
   const { hour: notifyHour, minute: notifyMinute } = useMemo(() => {
@@ -222,7 +231,7 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
         if (!isActive) return;
         if (error instanceof ProfileApiError && error.status === 401) {
           Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
-          void signOut();
+          onUnauthorized();
           return;
         }
         const message = error instanceof Error ? error.message : '프로필을 불러오지 못했어요.';
@@ -236,7 +245,7 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
     return () => {
       isActive = false;
     };
-  }, [signOut, visible]);
+  }, [onUnauthorized, visible]);
 
   const update = (patch: Partial<UserSettings>) => setForm((prev) => ({ ...prev, ...patch }));
 
@@ -257,7 +266,7 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
     } catch (error) {
       if (error instanceof ProfileApiError && error.status === 401) {
         Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
-        void signOut();
+        onUnauthorized();
         return;
       }
       const message = error instanceof Error ? error.message : '프로필을 저장하지 못했어요.';
@@ -267,8 +276,8 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
     }
   };
 
-  const handleLogout = async () => {
-    await signOut();
+  const handleLogout = () => {
+    onLogout();
   };
 
   const insets = useSafeAreaInsets();

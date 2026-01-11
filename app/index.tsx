@@ -22,6 +22,7 @@ import {
 
 const HAS_ONBOARDED_KEY = 'hasOnboarded';
 const USER_SETTINGS_KEY = 'userSettings';
+const HAS_LOGGED_IN_KEY = 'hasLoggedIn';
 
 export default function Home() {
   const navigation = useNavigation();
@@ -29,18 +30,23 @@ export default function Home() {
   const [bootLoading, setBootLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [hasOnboarded, setHasOnboarded] = useState(false);
+  const [hasLoggedIn, setHasLoggedIn] = useState(false);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [forceLogin, setForceLogin] = useState(false);
   const [pushToken, setPushToken] = useState<string | null>(null);
 
   const { isBootstrapping: authBootstrapping, isSignedIn, signOut } = useAuth();
 
+  const shouldShowLogin = forceLogin || (!isSignedIn && !hasLoggedIn);
+
   const canLoadFortune =
-    isSignedIn &&
+    !shouldShowLogin &&
+    (isSignedIn || hasLoggedIn) &&
     !!userSettings &&
     !needsProfileSetup &&
     !profileLoading &&
@@ -56,13 +62,15 @@ export default function Home() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [onboardedRaw, settingsRaw] = await Promise.all([
+        const [onboardedRaw, settingsRaw, loggedInRaw] = await Promise.all([
           AsyncStorage.getItem(HAS_ONBOARDED_KEY),
           AsyncStorage.getItem(USER_SETTINGS_KEY),
+          AsyncStorage.getItem(HAS_LOGGED_IN_KEY),
         ]);
 
         if (onboardedRaw === 'true') setHasOnboarded(true);
         if (settingsRaw) setUserSettings(JSON.parse(settingsRaw));
+        if (loggedInRaw === 'true') setHasLoggedIn(true);
       } catch (error) {
         console.warn('Failed to load saved state', error);
       } finally {
@@ -146,7 +154,7 @@ export default function Home() {
         if (!active) return;
         if (error instanceof ProfileApiError && error.status === 401) {
           Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
-          await signOut();
+          requireLogin();
           return;
         }
         const message = error instanceof Error ? error.message : '프로필을 불러오지 못했어요.';
@@ -161,7 +169,7 @@ export default function Home() {
     return () => {
       active = false;
     };
-  }, [isSignedIn, signOut]);
+  }, [isSignedIn, requireLogin]);
 
   // Header: show only when main screen is active
   useLayoutEffect(() => {
@@ -173,20 +181,35 @@ export default function Home() {
     await AsyncStorage.setItem(HAS_ONBOARDED_KEY, 'true');
   };
 
+  const persistHasLoggedIn = useCallback(async () => {
+    setHasLoggedIn(true);
+    await AsyncStorage.setItem(HAS_LOGGED_IN_KEY, 'true');
+  }, []);
+
   const persistUserSettings = async (settings: UserSettings) => {
     setUserSettings(settings);
     await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
   };
 
+  const requireLogin = useCallback(() => {
+    setForceLogin(true);
+    setIsSettingsOpen(false);
+    void signOut();
+  }, [signOut]);
+
   const handleSignUpSuccess = useCallback(() => {
+    void persistHasLoggedIn();
+    setForceLogin(false);
     setNeedsProfileSetup(true);
     setNeedsOnboarding(true);
-  }, []);
+  }, [persistHasLoggedIn]);
 
   const handleSignInSuccess = useCallback(() => {
+    void persistHasLoggedIn();
+    setForceLogin(false);
     setNeedsProfileSetup(false);
     setProfileLoading(true);
-  }, []);
+  }, [persistHasLoggedIn]);
 
   const handleOnboardingComplete = () => {
     setNeedsOnboarding(false);
@@ -203,7 +226,7 @@ export default function Home() {
     } catch (error) {
       if (error instanceof ProfileApiError && error.status === 401) {
         Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
-        await signOut();
+        requireLogin();
         return;
       }
       const message = error instanceof Error ? error.message : '프로필을 저장하지 못했어요.';
@@ -216,12 +239,12 @@ export default function Home() {
   useEffect(() => {
     if (!error) return;
     if (error.status === 401) {
-      signOut();
+      requireLogin();
       Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
       return;
     }
     Alert.alert('운세를 불러오지 못했어요', error.message);
-  }, [error, signOut]);
+  }, [error, requireLogin]);
 
   const handleNextDay = useCallback(() => {
     setCurrentDate((prev) => {
@@ -239,7 +262,7 @@ export default function Home() {
     });
   }, []);
 
-  if (bootLoading || authBootstrapping || profileLoading) {
+  if (bootLoading || authBootstrapping || (profileLoading && !forceLogin)) {
     return (
       <View className="flex-1 items-center justify-center bg-stone-200">
         <ActivityIndicator size="large" color="#191F28" />
@@ -247,7 +270,7 @@ export default function Home() {
     );
   }
 
-  if (!isSignedIn) {
+  if (shouldShowLogin) {
     return (
       <LoginScreen
         onSignUpSuccess={handleSignUpSuccess}
@@ -296,6 +319,8 @@ export default function Home() {
             await persistUserSettings(nextSettings);
             setIsSettingsOpen(false);
           }}
+          onLogout={requireLogin}
+          onUnauthorized={requireLogin}
         />
       )}
     </View>
