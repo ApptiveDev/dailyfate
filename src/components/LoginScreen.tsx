@@ -12,7 +12,10 @@ interface Props {
   onSignInSuccess?: () => void;
 }
 
-const INPUT_STYLE = { lineHeight: 28, minHeight: 56 };
+const INPUT_STYLE = {
+  includeFontPadding: false,
+  minHeight: 64,
+};
 
 const LoginScreen: React.FC<Props> = ({ onSignUpSuccess, onSignInSuccess }) => {
   const { signIn, signUp, isLoading, error, clearError } = useAuth();
@@ -129,7 +132,7 @@ const LoginScreen: React.FC<Props> = ({ onSignUpSuccess, onSignInSuccess }) => {
                 autoCapitalize="none"
                 autoCorrect={false}
                 textAlignVertical="center"
-                className="rounded-xl bg-gray-100 px-4 py-5 text-xl text-gray-900"
+                className="rounded-xl bg-gray-100 px-4 text-2xl text-gray-900"
                 textContentType="username"
                 style={INPUT_STYLE}
               />
@@ -143,7 +146,7 @@ const LoginScreen: React.FC<Props> = ({ onSignUpSuccess, onSignInSuccess }) => {
                 placeholderTextColor="#9ca3af"
                 secureTextEntry
                 textAlignVertical="center"
-                className="rounded-xl bg-gray-100 px-4 py-5 text-xl text-gray-900"
+                className="rounded-xl bg-gray-100 px-4 text-2xl text-gray-900"
                 textContentType="password"
                 style={INPUT_STYLE}
               />
