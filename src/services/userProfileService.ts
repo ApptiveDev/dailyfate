@@ -104,6 +104,31 @@ const toBirthDateTime = (birthdate: string) => {
   return `${trimmed}T00:00:00`;
 };
 
+const normalizeNotificationTime = (notificationTime: string) => {
+  const trimmed = notificationTime.trim();
+  if (!trimmed) return undefined;
+  const match = trimmed.match(/^(\d{1,2}):(\d{1,2})$/);
+  if (!match) {
+    throw new ProfileApiError('알림 시간 형식이 올바르지 않습니다.');
+  }
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (
+    !Number.isFinite(hour) ||
+    !Number.isFinite(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    throw new ProfileApiError('알림 시간 형식이 올바르지 않습니다.');
+  }
+  if (minute % 5 !== 0) {
+    throw new ProfileApiError('알림 시간은 5분 단위만 설정할 수 있습니다.');
+  }
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+};
+
 const mapProfileToSettings = (profile: UserProfile): UserSettings => ({
   nickname: profile.name ?? '',
   gender: mapGenderFromApi(profile.gender),
@@ -126,7 +151,7 @@ const buildProfilePatch = (settings: UserSettings): UserProfilePatch => {
   const birthDateTime = toBirthDateTime(settings.birthdate);
   if (birthDateTime) payload.birthDateTime = birthDateTime;
 
-  const notificationTime = settings.notificationTime.trim();
+  const notificationTime = normalizeNotificationTime(settings.notificationTime);
   if (notificationTime) payload.notificationTime = notificationTime;
 
   return payload;
@@ -184,9 +209,9 @@ export async function updateUserProfile(settings: UserSettings): Promise<UserSet
   const url = `${baseUrl}/users/me`;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
-  const payload = buildProfilePatch(settings);
 
   try {
+    const payload = buildProfilePatch(settings);
     const response = await fetch(url, {
       method: 'PATCH',
       headers: await buildHeaders(true),

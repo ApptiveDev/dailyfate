@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Alert, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useNavigation } from 'expo-router';
@@ -13,10 +13,16 @@ import SettingsSheet from '@/components/SettingsSheet';
 import LoginScreen from '@/components/LoginScreen';
 import { useAuth } from '@/providers/AuthProvider';
 import { registerForPushNotificationsAsync } from '@/services/pushNotifications';
-import { ProfileApiError, updateUserProfile } from '@/services/userProfileService';
+import { updatePushToken } from '@/services/pushTokenService';
+import {
+  fetchUserProfile,
+  ProfileApiError,
+  updateUserProfile,
+} from '@/services/userProfileService';
 
 const HAS_ONBOARDED_KEY = 'hasOnboarded';
 const USER_SETTINGS_KEY = 'userSettings';
+const HAS_LOGGED_IN_KEY = 'hasLoggedIn';
 
 export default function Home() {
   const navigation = useNavigation();
@@ -24,16 +30,27 @@ export default function Home() {
   const [bootLoading, setBootLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [hasOnboarded, setHasOnboarded] = useState(false);
+  const [hasLoggedIn, setHasLoggedIn] = useState(false);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [forceLogin, setForceLogin] = useState(false);
+  const [pushToken, setPushToken] = useState<string | null>(null);
 
   const { isBootstrapping: authBootstrapping, isSignedIn, signOut } = useAuth();
 
+  const shouldShowLogin = forceLogin || (!isSignedIn && !hasLoggedIn);
+
   const canLoadFortune =
-    isSignedIn && !!userSettings && !needsProfileSetup && (!needsOnboarding || hasOnboarded);
+    !shouldShowLogin &&
+    (isSignedIn || hasLoggedIn) &&
+    !!userSettings &&
+    !needsProfileSetup &&
+    !profileLoading &&
+    (!needsOnboarding || hasOnboarded);
 
   const {
     fortune,
@@ -45,13 +62,15 @@ export default function Home() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [onboardedRaw, settingsRaw] = await Promise.all([
+        const [onboardedRaw, settingsRaw, loggedInRaw] = await Promise.all([
           AsyncStorage.getItem(HAS_ONBOARDED_KEY),
           AsyncStorage.getItem(USER_SETTINGS_KEY),
+          AsyncStorage.getItem(HAS_LOGGED_IN_KEY),
         ]);
 
         if (onboardedRaw === 'true') setHasOnboarded(true);
         if (settingsRaw) setUserSettings(JSON.parse(settingsRaw));
+        if (loggedInRaw === 'true') setHasLoggedIn(true);
       } catch (error) {
         console.warn('Failed to load saved state', error);
       } finally {
@@ -63,11 +82,16 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+
     const registerPushToken = async () => {
       try {
         const token = await registerForPushNotificationsAsync();
         if (token) {
           console.log('Expo push token:', token);
+          if (active) {
+            setPushToken(token);
+          }
         }
       } catch (error) {
         console.warn('Failed to register for push notifications', error);
@@ -75,14 +99,83 @@ export default function Home() {
     };
 
     registerPushToken();
+
+    return () => {
+      active = false;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!isSignedIn || !pushToken) return;
+
+    const platform = Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : null;
+    if (!platform) return;
+
+    const syncPushToken = async () => {
+      try {
+        const result = await updatePushToken({ pushToken, platform });
+        console.log('Push token synced:', result);
+      } catch (error) {
+        console.warn('Failed to sync push token', error);
+      }
+    };
+
+    syncPushToken();
+  }, [isSignedIn, pushToken]);
 
   useEffect(() => {
     if (isSignedIn) return;
     setIsSettingsOpen(false);
     setNeedsProfileSetup(false);
     setNeedsOnboarding(false);
+    setProfileLoading(false);
   }, [isSignedIn]);
+
+  const requireLogin = useCallback(() => {
+    setForceLogin(true);
+    setIsSettingsOpen(false);
+    void signOut();
+  }, [signOut]);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+
+    let active = true;
+    setProfileLoading(true);
+
+    const loadProfile = async () => {
+      try {
+        const profile = await fetchUserProfile();
+        if (!active) return;
+        if (profile) {
+          setNeedsProfileSetup(false);
+          setUserSettings(profile);
+          await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(profile));
+        } else {
+          setNeedsProfileSetup(true);
+          setUserSettings(null);
+          await AsyncStorage.removeItem(USER_SETTINGS_KEY);
+        }
+      } catch (error) {
+        if (!active) return;
+        if (error instanceof ProfileApiError && error.status === 401) {
+          Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
+          requireLogin();
+          return;
+        }
+        const message = error instanceof Error ? error.message : '프로필을 불러오지 못했어요.';
+        Alert.alert('프로필 조회 실패', message);
+      } finally {
+        if (active) setProfileLoading(false);
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [isSignedIn, requireLogin]);
 
   // Header: show only when main screen is active
   useLayoutEffect(() => {
@@ -94,19 +187,29 @@ export default function Home() {
     await AsyncStorage.setItem(HAS_ONBOARDED_KEY, 'true');
   };
 
+  const persistHasLoggedIn = useCallback(async () => {
+    setHasLoggedIn(true);
+    await AsyncStorage.setItem(HAS_LOGGED_IN_KEY, 'true');
+  }, []);
+
   const persistUserSettings = async (settings: UserSettings) => {
     setUserSettings(settings);
     await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
   };
 
   const handleSignUpSuccess = useCallback(() => {
+    void persistHasLoggedIn();
+    setForceLogin(false);
     setNeedsProfileSetup(true);
     setNeedsOnboarding(true);
-  }, []);
+  }, [persistHasLoggedIn]);
 
   const handleSignInSuccess = useCallback(() => {
-    setNeedsProfileSetup(true);
-  }, []);
+    void persistHasLoggedIn();
+    setForceLogin(false);
+    setNeedsProfileSetup(false);
+    setProfileLoading(true);
+  }, [persistHasLoggedIn]);
 
   const handleOnboardingComplete = () => {
     setNeedsOnboarding(false);
@@ -123,7 +226,7 @@ export default function Home() {
     } catch (error) {
       if (error instanceof ProfileApiError && error.status === 401) {
         Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
-        await signOut();
+        requireLogin();
         return;
       }
       const message = error instanceof Error ? error.message : '프로필을 저장하지 못했어요.';
@@ -136,12 +239,12 @@ export default function Home() {
   useEffect(() => {
     if (!error) return;
     if (error.status === 401) {
-      signOut();
+      requireLogin();
       Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
       return;
     }
     Alert.alert('운세를 불러오지 못했어요', error.message);
-  }, [error, signOut]);
+  }, [error, requireLogin]);
 
   const handleNextDay = useCallback(() => {
     setCurrentDate((prev) => {
@@ -159,7 +262,7 @@ export default function Home() {
     });
   }, []);
 
-  if (bootLoading || authBootstrapping) {
+  if (bootLoading || authBootstrapping || (profileLoading && !forceLogin)) {
     return (
       <View className="flex-1 items-center justify-center bg-stone-200">
         <ActivityIndicator size="large" color="#191F28" />
@@ -167,7 +270,7 @@ export default function Home() {
     );
   }
 
-  if (!isSignedIn) {
+  if (shouldShowLogin) {
     return (
       <LoginScreen
         onSignUpSuccess={handleSignUpSuccess}
@@ -216,6 +319,8 @@ export default function Home() {
             await persistUserSettings(nextSettings);
             setIsSettingsOpen(false);
           }}
+          onLogout={requireLogin}
+          onUnauthorized={requireLogin}
         />
       )}
     </View>

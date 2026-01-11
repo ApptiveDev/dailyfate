@@ -30,6 +30,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 const dayKey = (value: Date) =>
   value.getFullYear() * 10000 + (value.getMonth() + 1) * 100 + value.getDate();
 const isBeforeDay = (left: Date, right: Date) => dayKey(left) < dayKey(right);
+const MIN_FORTUNE_DATE = new Date(2026, 0, 1);
 const EDGE_TRIGGER_RATIO = 0.22;
 const TAP_MOVE_TOLERANCE = 10;
 const TAP_MAX_DURATION_MS = 280;
@@ -88,6 +89,7 @@ const CalendarPage: React.FC<Props> = ({
     };
   }, [bounceAnim]);
 
+  const canGoPrev = () => isBeforeDay(MIN_FORTUNE_DATE, date);
   const canGoNext = () => isBeforeDay(date, new Date());
 
   const handleTear = () => {
@@ -184,7 +186,7 @@ const CalendarPage: React.FC<Props> = ({
   });
 
   const handlePrevTap = () => {
-    if (isTearing) return;
+    if (isTearing || !canGoPrev()) return;
     onPrev();
   };
 
