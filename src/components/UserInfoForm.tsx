@@ -296,19 +296,16 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
     () => parseTimeParts(timePart || DEFAULT_BIRTH_TIME, DEFAULT_BIRTH_TIME),
     [timePart],
   );
-  const { hour: notifyHour, minute: notifyMinute } = useMemo(
-    () => {
-      const parsed = parseTimeParts(
-        form.notificationTime || DEFAULT_NOTIFICATION_TIME,
-        DEFAULT_NOTIFICATION_TIME,
-      );
-      return {
-        hour: parsed.hour,
-        minute: normalizeMinuteToStep(parsed.minute, NOTIFICATION_MINUTE_STEP),
-      };
-    },
-    [form.notificationTime],
-  );
+  const { hour: notifyHour, minute: notifyMinute } = useMemo(() => {
+    const parsed = parseTimeParts(
+      form.notificationTime || DEFAULT_NOTIFICATION_TIME,
+      DEFAULT_NOTIFICATION_TIME,
+    );
+    return {
+      hour: parsed.hour,
+      minute: normalizeMinuteToStep(parsed.minute, NOTIFICATION_MINUTE_STEP),
+    };
+  }, [form.notificationTime]);
 
   const yearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -454,7 +451,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
             <Text className="text-xl font-bold text-gray-700">생년월일</Text>
             <Pressable className="rounded-xl bg-gray-100 px-4 py-4" onPress={openBirthDateModal}>
               <View className="flex-row items-center justify-between">
-                <Text className="text-2xl font-semibold text-gray-900">{birthSummary}</Text>
+                <Text className="text-lg font-semibold text-gray-900">{birthSummary}</Text>
                 <Text className="text-sm font-semibold text-gray-500">선택</Text>
               </View>
             </Pressable>
