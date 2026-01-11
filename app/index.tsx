@@ -131,6 +131,12 @@ export default function Home() {
     setProfileLoading(false);
   }, [isSignedIn]);
 
+  const requireLogin = useCallback(() => {
+    setForceLogin(true);
+    setIsSettingsOpen(false);
+    void signOut();
+  }, [signOut]);
+
   useEffect(() => {
     if (!isSignedIn) return;
 
@@ -190,12 +196,6 @@ export default function Home() {
     setUserSettings(settings);
     await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
   };
-
-  const requireLogin = useCallback(() => {
-    setForceLogin(true);
-    setIsSettingsOpen(false);
-    void signOut();
-  }, [signOut]);
 
   const handleSignUpSuccess = useCallback(() => {
     void persistHasLoggedIn();
