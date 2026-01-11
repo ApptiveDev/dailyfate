@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -6,6 +6,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -27,22 +28,185 @@ interface Props {
   onSave: (settings: UserSettings) => void;
 }
 
+const ITEM_HEIGHT = 36;
+const VISIBLE_ITEMS = 5;
+const DEFAULT_NOTIFICATION_TIME = '08:00';
+const NOTIFICATION_MINUTE_STEP = 5;
+
+const pad2 = (value: number) => String(value).padStart(2, '0');
+
+const parseTimeParts = (value: string, fallback: string) => {
+  const [fallbackHour, fallbackMinute] = fallback.split(':');
+  const match = value.match(/(\d{1,2}):(\d{1,2})/);
+  if (!match) return { hour: fallbackHour, minute: fallbackMinute };
+  const hourNumber = Number(match[1]);
+  const minuteNumber = Number(match[2]);
+  const hour = pad2(hourNumber);
+  const minute = pad2(minuteNumber);
+  if (
+    !Number.isFinite(hourNumber) ||
+    !Number.isFinite(minuteNumber) ||
+    hourNumber > 23 ||
+    minuteNumber > 59
+  ) {
+    return { hour: fallbackHour, minute: fallbackMinute };
+  }
+  return { hour, minute };
+};
+
+const normalizeMinuteToStep = (minute: string, step: number) => {
+  const numeric = Number(minute);
+  if (!Number.isFinite(numeric)) return minute;
+  const normalized = Math.floor(numeric / step) * step;
+  const bounded = Math.min(Math.max(normalized, 0), 59);
+  return pad2(bounded);
+};
+
+const WheelPicker: React.FC<{
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+  itemTextClassName?: string;
+}> = ({ options, value, onChange, itemTextClassName = 'text-base' }) => {
+  const scrollRef = useRef<ScrollView | null>(null);
+  const padding = ((VISIBLE_ITEMS - 1) / 2) * ITEM_HEIGHT;
+
+  useEffect(() => {
+    if (!options.length) return;
+    const index = Math.max(0, options.indexOf(value));
+    scrollRef.current?.scrollTo({ y: index * ITEM_HEIGHT, animated: false });
+  }, [options, value]);
+
+  const handleScrollEnd = (event: { nativeEvent: { contentOffset: { y: number } } }) => {
+    if (!options.length) return;
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const bounded = Math.max(0, Math.min(index, options.length - 1));
+    const nextValue = options[bounded];
+    if (nextValue !== value) onChange(nextValue);
+  };
+
+  return (
+    <View className="overflow-hidden" style={{ height: ITEM_HEIGHT * VISIBLE_ITEMS }}>
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ITEM_HEIGHT}
+        decelerationRate="fast"
+        onMomentumScrollEnd={handleScrollEnd}
+        onScrollEndDrag={handleScrollEnd}
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingVertical: padding }}
+      >
+        {options.map((option) => {
+          const isSelected = option === value;
+          return (
+            <View
+              key={option}
+              style={{ height: ITEM_HEIGHT }}
+              className="items-center justify-center"
+            >
+              <Text
+                className={`${isSelected ? 'text-gray-900' : 'text-gray-400'} ${itemTextClassName} `}
+              >
+                {option}
+              </Text>
+            </View>
+          );
+        })}
+      </ScrollView>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: padding,
+          height: ITEM_HEIGHT,
+          borderTopWidth: 1,
+          borderBottomWidth: 1,
+          borderColor: '#e5e7eb',
+        }}
+      />
+    </View>
+  );
+};
+
+const PickerModal: React.FC<{
+  visible: boolean;
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}> = ({ visible, title, onClose, children }) => (
+  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <View className="flex-1 justify-end bg-black/40 px-5 pb-8">
+      <Pressable className="absolute inset-0" onPress={onClose} />
+      <View className="rounded-2xl bg-white p-5">
+        <View className="mb-4 flex-row items-center justify-between">
+          <Text className="text-lg font-extrabold text-gray-900">{title}</Text>
+          <Pressable onPress={onClose} hitSlop={10} className="rounded-full px-2 py-1">
+            <Text className="text-sm font-semibold text-gray-500">닫기</Text>
+          </Pressable>
+        </View>
+        {children}
+        <Pressable className="mt-4 rounded-xl bg-gray-900 py-3" onPress={onClose}>
+          <Text className="text-center text-base font-bold text-white">완료</Text>
+        </Pressable>
+      </View>
+    </View>
+  </Modal>
+);
+
 const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) => {
   const [form, setForm] = useState<UserSettings>(settings);
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const { signOut, isLoading } = useAuth();
   const isBusy = isFetching || isSaving;
 
+  const { hour: notifyHour, minute: notifyMinute } = useMemo(() => {
+    const parsed = parseTimeParts(
+      form.notificationTime || DEFAULT_NOTIFICATION_TIME,
+      DEFAULT_NOTIFICATION_TIME,
+    );
+    return {
+      hour: parsed.hour,
+      minute: normalizeMinuteToStep(parsed.minute, NOTIFICATION_MINUTE_STEP),
+    };
+  }, [form.notificationTime]);
+
+  const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => pad2(i)), []);
+  const notifyMinuteOptions = useMemo(
+    () =>
+      Array.from({ length: 60 / NOTIFICATION_MINUTE_STEP }, (_, i) =>
+        pad2(i * NOTIFICATION_MINUTE_STEP),
+      ),
+    [],
+  );
+
   useEffect(() => {
     if (visible) {
-      setForm(settings);
+      const trimmed = settings.notificationTime.trim();
+      const parsed = parseTimeParts(
+        trimmed || DEFAULT_NOTIFICATION_TIME,
+        DEFAULT_NOTIFICATION_TIME,
+      );
+      const normalizedTime = `${parsed.hour}:${normalizeMinuteToStep(
+        parsed.minute,
+        NOTIFICATION_MINUTE_STEP,
+      )}`;
+      setForm({
+        ...settings,
+        notificationTime: trimmed ? normalizedTime : settings.notificationTime,
+      });
     }
   }, [visible, settings]);
 
   useEffect(() => {
     if (!visible) {
       setIsFetching(false);
+      setIsNotifyModalOpen(false);
       return;
     }
 
@@ -75,6 +239,14 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
   }, [signOut, visible]);
 
   const update = (patch: Partial<UserSettings>) => setForm((prev) => ({ ...prev, ...patch }));
+
+  const openNotifyModal = () => {
+    setIsNotifyModalOpen(true);
+    const normalizedTime = `${notifyHour}:${notifyMinute}`;
+    if (form.notificationTime.trim() !== normalizedTime) {
+      update({ notificationTime: normalizedTime });
+    }
+  };
 
   const handleSave = async () => {
     if (isBusy) return;
@@ -153,6 +325,28 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
             </View>
           </View>
 
+          <View className="gap-4">
+            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              알림
+            </Text>
+            <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <Row label="알림 시간">
+                <Pressable
+                  onPress={openNotifyModal}
+                  disabled={isBusy}
+                  className={`flex-row items-center space-x-2 ${
+                    isBusy ? 'opacity-60' : 'active:opacity-70'
+                  }`}
+                >
+                  <Text className="text-[15px] font-semibold text-gray-900">
+                    {`${notifyHour}:${notifyMinute}`}
+                  </Text>
+                  <Feather name="chevron-down" size={16} color="#9ca3af" />
+                </Pressable>
+              </Row>
+            </View>
+          </View>
+
           <Pressable
             className={`rounded-xl py-3.5 active:opacity-90 ${
               isBusy ? 'bg-gray-900/60' : 'bg-gray-900'
@@ -179,6 +373,37 @@ const SettingsSheet: React.FC<Props> = ({ visible, onClose, settings, onSave }) 
             </Pressable>
           </View>
         </View>
+
+        <PickerModal
+          visible={isNotifyModalOpen}
+          title="알림 시간"
+          onClose={() => setIsNotifyModalOpen(false)}
+        >
+          <View className="mb-2 flex-row">
+            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">시</Text>
+            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">분</Text>
+          </View>
+          <View className="flex-row items-center">
+            <View className="flex-1 items-center">
+              <WheelPicker
+                options={hourOptions}
+                value={notifyHour}
+                onChange={(nextHour) =>
+                  update({ notificationTime: `${nextHour}:${notifyMinute}` })
+                }
+              />
+            </View>
+            <View className="flex-1 items-center">
+              <WheelPicker
+                options={notifyMinuteOptions}
+                value={notifyMinute}
+                onChange={(nextMinute) =>
+                  update({ notificationTime: `${notifyHour}:${nextMinute}` })
+                }
+              />
+            </View>
+          </View>
+        </PickerModal>
       </KeyboardAvoidingView>
     </Modal>
   );

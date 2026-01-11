@@ -26,6 +26,7 @@ const ITEM_HEIGHT = 36;
 const VISIBLE_ITEMS = 5;
 const DEFAULT_NOTIFICATION_TIME = '08:00';
 const DEFAULT_BIRTH_TIME = '00:00';
+const NOTIFICATION_MINUTE_STEP = 5;
 
 const pad2 = (value: number) => String(value).padStart(2, '0');
 
@@ -76,6 +77,14 @@ const parseTimeParts = (value: string, fallback: string) => {
     return { hour: fallbackHour, minute: fallbackMinute };
   }
   return { hour, minute };
+};
+
+const normalizeMinuteToStep = (minute: string, step: number) => {
+  const numeric = Number(minute);
+  if (!Number.isFinite(numeric)) return minute;
+  const normalized = Math.floor(numeric / step) * step;
+  const bounded = Math.min(Math.max(normalized, 0), 59);
+  return pad2(bounded);
 };
 
 const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
@@ -288,8 +297,16 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
     [timePart],
   );
   const { hour: notifyHour, minute: notifyMinute } = useMemo(
-    () =>
-      parseTimeParts(form.notificationTime || DEFAULT_NOTIFICATION_TIME, DEFAULT_NOTIFICATION_TIME),
+    () => {
+      const parsed = parseTimeParts(
+        form.notificationTime || DEFAULT_NOTIFICATION_TIME,
+        DEFAULT_NOTIFICATION_TIME,
+      );
+      return {
+        hour: parsed.hour,
+        minute: normalizeMinuteToStep(parsed.minute, NOTIFICATION_MINUTE_STEP),
+      };
+    },
     [form.notificationTime],
   );
 
@@ -309,7 +326,14 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
     return Array.from({ length: totalDays }, (_, i) => pad2(i + 1));
   }, [month, year]);
   const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => pad2(i)), []);
-  const minuteOptions = useMemo(() => Array.from({ length: 60 }, (_, i) => pad2(i)), []);
+  const birthMinuteOptions = useMemo(() => Array.from({ length: 60 }, (_, i) => pad2(i)), []);
+  const notifyMinuteOptions = useMemo(
+    () =>
+      Array.from({ length: 60 / NOTIFICATION_MINUTE_STEP }, (_, i) =>
+        pad2(i * NOTIFICATION_MINUTE_STEP),
+      ),
+    [],
+  );
 
   const isValid = useMemo(() => form.nickname.trim() !== '' && form.birthdate !== '', [form]);
 
@@ -330,6 +354,14 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
     if (form.birthdate.trim()) return;
     update({ birthdate: buildBirthDateTime(year, month, day, birthHour, birthMinute) });
   }, [birthHour, birthMinute, day, form.birthdate, month, update, year]);
+
+  useEffect(() => {
+    if (!form.notificationTime.trim()) return;
+    const normalizedTime = `${notifyHour}:${notifyMinute}`;
+    if (form.notificationTime.trim() !== normalizedTime) {
+      update({ notificationTime: normalizedTime });
+    }
+  }, [form.notificationTime, notifyHour, notifyMinute, update]);
 
   const birthSummary = buildBirthdate(year, month, day);
   const birthTimeSummary = `${birthHour}:${birthMinute}`;
@@ -357,8 +389,9 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
     setIsNotifyModalOpen(true);
     setIsBirthDateModalOpen(false);
     setIsBirthTimeModalOpen(false);
-    if (!form.notificationTime.trim()) {
-      update({ notificationTime: `${notifyHour}:${notifyMinute}` });
+    const normalizedTime = `${notifyHour}:${notifyMinute}`;
+    if (form.notificationTime.trim() !== normalizedTime) {
+      update({ notificationTime: normalizedTime });
     }
   }, [form.notificationTime, notifyHour, notifyMinute, update]);
 
@@ -511,7 +544,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
               </View>
               <View className="flex-1 items-center">
                 <WheelPicker
-                  options={minuteOptions}
+                  options={birthMinuteOptions}
                   value={birthMinute}
                   onChange={(nextMinute) =>
                     update({
@@ -544,7 +577,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
               </View>
               <View className="flex-1 items-center">
                 <WheelPicker
-                  options={minuteOptions}
+                  options={notifyMinuteOptions}
                   value={notifyMinute}
                   onChange={(nextMinute) =>
                     update({ notificationTime: `${notifyHour}:${nextMinute}` })

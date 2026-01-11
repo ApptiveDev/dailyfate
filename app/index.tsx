@@ -14,7 +14,11 @@ import LoginScreen from '@/components/LoginScreen';
 import { useAuth } from '@/providers/AuthProvider';
 import { registerForPushNotificationsAsync } from '@/services/pushNotifications';
 import { updatePushToken } from '@/services/pushTokenService';
-import { ProfileApiError, updateUserProfile } from '@/services/userProfileService';
+import {
+  fetchUserProfile,
+  ProfileApiError,
+  updateUserProfile,
+} from '@/services/userProfileService';
 
 const HAS_ONBOARDED_KEY = 'hasOnboarded';
 const USER_SETTINGS_KEY = 'userSettings';
@@ -30,12 +34,17 @@ export default function Home() {
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [pushToken, setPushToken] = useState<string | null>(null);
 
   const { isBootstrapping: authBootstrapping, isSignedIn, signOut } = useAuth();
 
   const canLoadFortune =
-    isSignedIn && !!userSettings && !needsProfileSetup && (!needsOnboarding || hasOnboarded);
+    isSignedIn &&
+    !!userSettings &&
+    !needsProfileSetup &&
+    !profileLoading &&
+    (!needsOnboarding || hasOnboarded);
 
   const {
     fortune,
@@ -111,7 +120,48 @@ export default function Home() {
     setIsSettingsOpen(false);
     setNeedsProfileSetup(false);
     setNeedsOnboarding(false);
+    setProfileLoading(false);
   }, [isSignedIn]);
+
+  useEffect(() => {
+    if (!isSignedIn) return;
+
+    let active = true;
+    setProfileLoading(true);
+
+    const loadProfile = async () => {
+      try {
+        const profile = await fetchUserProfile();
+        if (!active) return;
+        if (profile) {
+          setNeedsProfileSetup(false);
+          setUserSettings(profile);
+          await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(profile));
+        } else {
+          setNeedsProfileSetup(true);
+          setUserSettings(null);
+          await AsyncStorage.removeItem(USER_SETTINGS_KEY);
+        }
+      } catch (error) {
+        if (!active) return;
+        if (error instanceof ProfileApiError && error.status === 401) {
+          Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
+          await signOut();
+          return;
+        }
+        const message = error instanceof Error ? error.message : '프로필을 불러오지 못했어요.';
+        Alert.alert('프로필 조회 실패', message);
+      } finally {
+        if (active) setProfileLoading(false);
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [isSignedIn, signOut]);
 
   // Header: show only when main screen is active
   useLayoutEffect(() => {
@@ -134,7 +184,8 @@ export default function Home() {
   }, []);
 
   const handleSignInSuccess = useCallback(() => {
-    setNeedsProfileSetup(true);
+    setNeedsProfileSetup(false);
+    setProfileLoading(true);
   }, []);
 
   const handleOnboardingComplete = () => {
@@ -188,7 +239,7 @@ export default function Home() {
     });
   }, []);
 
-  if (bootLoading || authBootstrapping) {
+  if (bootLoading || authBootstrapping || profileLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-stone-200">
         <ActivityIndicator size="large" color="#191F28" />
