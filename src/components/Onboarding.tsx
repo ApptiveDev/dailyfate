@@ -194,6 +194,7 @@ const MockCalendar: React.FC<{
         <View className="h-2 w-32 rounded-full bg-gray-100" />
         <View className="h-2 w-20 rounded-full bg-gray-50" />
       </View>
+      <View className="mt-48 h-px w-full bg-gray-200" />
     </View>
   </View>
 );
