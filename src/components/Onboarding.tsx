@@ -146,7 +146,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 const StepText: React.FC<StepProps> = ({
   title,
   description,
-  titleClassName = 'text-[24px] leading-7',
+  titleClassName = 'text-[24px] leading-32',
 }) => (
   <View className="mb-10 items-center gap-3">
     <Text className={`text-center font-bold text-[#191F28] ${titleClassName}`}>{title}</Text>
@@ -265,7 +265,6 @@ const Step2Visual: React.FC<PhoneStepProps> = ({ title, description, phoneWidth,
           className="h-20 bg-gray-50 border-b-2 border-dashed border-gray-200 justify-center"
           onLayout={handleTrackLayout}
         >
-          <View className="absolute left-0 right-0 h-0.5 bg-blue-500/10" />
           <Animated.View
             pointerEvents="none"
             style={{
@@ -286,8 +285,8 @@ const Step2Visual: React.FC<PhoneStepProps> = ({ title, description, phoneWidth,
             <Text className="text-xs font-bold text-gray-300">2024</Text>
             <Text className="text-xs font-bold text-gray-300">MAY</Text>
           </View>
-          <Text className="mt-2 text-[96px] font-bold text-gray-300 opacity-30">14</Text>
-          <View className="mt-6 w-full items-center space-y-3">
+          <Text className="mt-10 text-[120px] font-bold text-gray-300 opacity-30">14</Text>
+          <View className="mt-12 w-full items-center space-y-3">
             <View className="h-2.5 w-full max-w-[200px] rounded-full bg-gray-200 my-2" />
             <View className="h-2.5 w-3/4 max-w-[150px] rounded-full bg-gray-200 my-2" />
           </View>
