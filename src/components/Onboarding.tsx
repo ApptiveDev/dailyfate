@@ -25,6 +25,7 @@ interface OnboardingProps {
 interface StepProps {
   title: string;
   description: string;
+  titleClassName?: string;
 }
 
 interface PhoneStepProps extends StepProps {
@@ -142,9 +143,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   );
 };
 
-const StepText: React.FC<StepProps> = ({ title, description }) => (
+const StepText: React.FC<StepProps> = ({
+  title,
+  description,
+  titleClassName = 'text-[24px] leading-7',
+}) => (
   <View className="mb-10 items-center gap-3">
-    <Text className="text-center text-[24px] font-bold leading-7 text-[#191F28]">{title}</Text>
+    <Text className={`text-center font-bold text-[#191F28] ${titleClassName}`}>{title}</Text>
     <Text className="text-center text-[15px] leading-6 text-[#8B95A1]">{description}</Text>
   </View>
 );
@@ -201,7 +206,7 @@ const MockCalendar: React.FC<{
 
 const Step1Visual: React.FC<StepProps> = ({ title, description }) => (
   <View className="flex-1 items-center justify-center px-10">
-    <StepText title={title} description={description} />
+    <StepText title={title} description={description} titleClassName="text-[28px] leading-[36px]" />
     <View className="items-center justify-center">
       <View className="absolute h-56 w-56" />
       <View className="rounded-[32px] bg-white shadow-2xl">
