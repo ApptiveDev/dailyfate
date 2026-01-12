@@ -23,6 +23,7 @@ import {
 const HAS_ONBOARDED_KEY = 'hasOnboarded';
 const USER_SETTINGS_KEY = 'userSettings';
 const HAS_LOGGED_IN_KEY = 'hasLoggedIn';
+type LoginMode = 'signIn' | 'signUp';
 
 export default function Home() {
   const navigation = useNavigation();
@@ -34,23 +35,23 @@ export default function Home() {
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [forceLogin, setForceLogin] = useState(false);
   const [pushToken, setPushToken] = useState<string | null>(null);
+  const [loginMode, setLoginMode] = useState<LoginMode>('signIn');
 
   const { isBootstrapping: authBootstrapping, isSignedIn, signOut } = useAuth();
 
   const shouldShowLogin = forceLogin || (!isSignedIn && !hasLoggedIn);
 
   const canLoadFortune =
+    hasOnboarded &&
     !shouldShowLogin &&
     (isSignedIn || hasLoggedIn) &&
     !!userSettings &&
     !needsProfileSetup &&
-    !profileLoading &&
-    (!needsOnboarding || hasOnboarded);
+    !profileLoading;
 
   const {
     fortune,
@@ -127,12 +128,12 @@ export default function Home() {
     if (isSignedIn) return;
     setIsSettingsOpen(false);
     setNeedsProfileSetup(false);
-    setNeedsOnboarding(false);
     setProfileLoading(false);
   }, [isSignedIn]);
 
   const requireLogin = useCallback(() => {
     setForceLogin(true);
+    setLoginMode('signIn');
     setIsSettingsOpen(false);
     void signOut();
   }, [signOut]);
@@ -201,7 +202,7 @@ export default function Home() {
     void persistHasLoggedIn();
     setForceLogin(false);
     setNeedsProfileSetup(true);
-    setNeedsOnboarding(true);
+    setLoginMode('signIn');
   }, [persistHasLoggedIn]);
 
   const handleSignInSuccess = useCallback(() => {
@@ -209,10 +210,11 @@ export default function Home() {
     setForceLogin(false);
     setNeedsProfileSetup(false);
     setProfileLoading(true);
+    setLoginMode('signIn');
   }, [persistHasLoggedIn]);
 
-  const handleOnboardingComplete = () => {
-    setNeedsOnboarding(false);
+  const handleOnboardingComplete = (mode: LoginMode = 'signIn') => {
+    setLoginMode(mode);
     void persistHasOnboarded();
   };
 
@@ -270,30 +272,31 @@ export default function Home() {
     );
   }
 
+  if (!hasOnboarded) {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
+
   if (shouldShowLogin) {
     return (
       <LoginScreen
         onSignUpSuccess={handleSignUpSuccess}
         onSignInSuccess={handleSignInSuccess}
+        initialMode={loginMode}
       />
     );
   }
 
-  const showOnboarding = needsOnboarding && !needsProfileSetup;
   const showUserForm = needsProfileSetup;
 
   return (
     <View className="flex-1 bg-white">
-      {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
-      {showUserForm && !showOnboarding && (
+      {showUserForm ? (
         <UserInfoForm
           initialValues={userSettings || undefined}
           onSubmit={handleUserInfoSubmit}
           isSubmitting={profileSaving}
         />
-      )}
-
-      {!showOnboarding && !showUserForm && (
+      ) : (
         <CalendarPage
           date={currentDate}
           onNext={handleNextDay}

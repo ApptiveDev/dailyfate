@@ -10,6 +10,7 @@ type AuthMode = 'signIn' | 'signUp';
 interface Props {
   onSignUpSuccess?: () => void;
   onSignInSuccess?: () => void;
+  initialMode?: AuthMode;
 }
 
 const INPUT_STYLE = {
@@ -17,9 +18,13 @@ const INPUT_STYLE = {
   minHeight: 64,
 };
 
-const LoginScreen: React.FC<Props> = ({ onSignUpSuccess, onSignInSuccess }) => {
+const LoginScreen: React.FC<Props> = ({
+  onSignUpSuccess,
+  onSignInSuccess,
+  initialMode = 'signIn',
+}) => {
   const { signIn, signUp, isLoading, error, clearError } = useAuth();
-  const [mode, setMode] = useState<AuthMode>('signIn');
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
