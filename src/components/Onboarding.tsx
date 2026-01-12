@@ -485,8 +485,8 @@ const Step4Visual: React.FC<PhoneStepProps> = ({ title, description, phoneWidth,
               <Text className="text-xs font-bold text-gray-300">2024</Text>
               <Text className="text-xs font-bold text-gray-300">MAY</Text>
             </View>
-            <Text className="mt-2 text-[96px] font-bold text-gray-300 opacity-30">14</Text>
-            <View className="mt-6 w-full items-center space-y-3">
+            <Text className="mt-2 text-[120px] font-bold text-gray-300 opacity-30">14</Text>
+            <View className="mt-12 w-full items-center gap-3">
               <View className="h-2.5 w-full max-w-[200px] rounded-full bg-gray-200" />
               <View className="h-2.5 w-3/4 max-w-[150px] rounded-full bg-gray-200" />
             </View>
