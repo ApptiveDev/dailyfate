@@ -530,8 +530,8 @@ const Step5Visual: React.FC<Step5Props> = ({ title, description, onComplete }) =
       <View className="flex-1 items-center justify-center px-8">
         <StepText title={title} description={description} />
         <View className="items-center justify-center">
-          <View className="absolute h-32 w-32 rounded-full bg-black/5" />
-          <View className="h-28 w-28 items-center justify-center rounded-[40px] border border-gray-100 bg-white shadow-xl">
+          <View className="absolute h-32 w-32 rounded-full" />
+          <View className="h-32 w-32 items-center justify-center rounded-[40px] border border-gray-100 bg-white shadow-xl">
             <Feather name="lock" size={44} color="#191F28" />
           </View>
         </View>
