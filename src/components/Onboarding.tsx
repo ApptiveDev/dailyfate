@@ -143,7 +143,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 };
 
 const StepText: React.FC<StepProps> = ({ title, description }) => (
-  <View className="mb-10 items-center space-y-3">
+  <View className="mb-10 items-center gap-3">
     <Text className="text-center text-[24px] font-bold leading-7 text-[#191F28]">{title}</Text>
     <Text className="text-center text-[15px] leading-6 text-[#8B95A1]">{description}</Text>
   </View>
@@ -181,9 +181,15 @@ const MockCalendar: React.FC<{
         <Text className="text-[10px] font-bold text-gray-300">2024</Text>
         <Text className="text-[10px] font-bold text-gray-300">MAY</Text>
       </View>
-      <Text className={`mt-3 text-[72px] font-bold ${day % 7 === 0 ? 'text-red-500' : 'text-[#191F28]'}`}>
-        {day}
-      </Text>
+      <View className="mt-3 w-full items-center">
+        <Text
+          className={`text-[72px] font-bold text-center ${
+            day % 7 === 0 ? 'text-red-500' : 'text-[#191F28]'
+          }`}
+        >
+          {day}
+        </Text>
+      </View>
       <View className="mt-6 items-center space-y-3">
         <View className="h-2 w-32 rounded-full bg-gray-100" />
         <View className="h-2 w-20 rounded-full bg-gray-50" />
@@ -196,7 +202,7 @@ const Step1Visual: React.FC<StepProps> = ({ title, description }) => (
   <View className="flex-1 items-center justify-center px-10">
     <StepText title={title} description={description} />
     <View className="items-center justify-center">
-      <View className="absolute h-56 w-56 rounded-full bg-[#191F28]/5" />
+      <View className="absolute h-56 w-56" />
       <View className="rounded-[32px] bg-white shadow-2xl">
         <Image
           source={appIcon}
@@ -276,8 +282,8 @@ const Step2Visual: React.FC<PhoneStepProps> = ({ title, description, phoneWidth,
           </View>
           <Text className="mt-2 text-[96px] font-bold text-gray-300 opacity-30">14</Text>
           <View className="mt-6 w-full items-center space-y-3">
-            <View className="h-2.5 w-full max-w-[200px] rounded-full bg-gray-200" />
-            <View className="h-2.5 w-3/4 max-w-[150px] rounded-full bg-gray-200" />
+            <View className="h-2.5 w-full max-w-[200px] rounded-full bg-gray-200 my-2" />
+            <View className="h-2.5 w-3/4 max-w-[150px] rounded-full bg-gray-200 my-2" />
           </View>
         </View>
       </PhoneMockup>
@@ -288,22 +294,26 @@ const Step2Visual: React.FC<PhoneStepProps> = ({ title, description, phoneWidth,
 const Step3Visual: React.FC<PhoneStepProps> = ({ title, description, phoneWidth, phoneHeight }) => {
   const scrollAnim = useRef(new Animated.Value(0)).current;
   const chevronAnim = useRef(new Animated.Value(0)).current;
+  const detailsHeight = 280;
+  const scrollDistance = Math.min(detailsHeight - 16, phoneHeight * 0.55);
 
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(scrollAnim, {
-          toValue: -180,
-          duration: 2800,
+          toValue: 1,
+          duration: 2600,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
+        Animated.delay(700),
         Animated.timing(scrollAnim, {
           toValue: 0,
-          duration: 2800,
+          duration: 2600,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
+        Animated.delay(700),
       ]),
     );
     animation.start();
@@ -346,33 +356,49 @@ const Step3Visual: React.FC<PhoneStepProps> = ({ title, description, phoneWidth,
     ],
   };
 
+  const dividerStyle = {
+    opacity: scrollAnim.interpolate({
+      inputRange: [0, 0.6, 1],
+      outputRange: [0.6, 0.35, 0.2],
+    }),
+    transform: [
+      {
+        translateY: scrollAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [6, -12],
+        }),
+      },
+      {
+        scaleX: scrollAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.92, 1.08],
+        }),
+      },
+    ],
+  };
+
+  const translateY = scrollAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [16, -scrollDistance],
+  });
+
   return (
     <View className="flex-1 items-center justify-center px-8">
       <StepText title={title} description={description} />
       <PhoneMockup width={phoneWidth} height={phoneHeight}>
         <View className="flex-1 overflow-hidden">
-          <Animated.View style={{ transform: [{ translateY: scrollAnim }] }}>
-            <MockCalendar day={14} fullHeight className="flex-1" />
-            <View className="h-[260px] w-full px-8 pt-6 space-y-5">
-              <View className="flex-row items-center gap-4">
-                <View className="h-10 w-10 rounded-full bg-gray-50" />
-                <View className="h-3 flex-1 rounded-full bg-gray-50" />
-              </View>
-              <View className="flex-row items-center gap-4">
-                <View className="h-10 w-10 rounded-full bg-gray-50" />
-                <View className="h-3 w-2/3 rounded-full bg-gray-50" />
-              </View>
-              <View className="flex-row items-center gap-4">
-                <View className="h-10 w-10 rounded-full bg-gray-50" />
-                <View className="h-3 w-2/3 rounded-full bg-gray-50" />
-              </View>
-              <View className="flex-row items-center gap-4">
-                <View className="h-10 w-10 rounded-full bg-gray-50" />
-                <View className="h-3 w-2/3 rounded-full bg-gray-50" />
-              </View>
-            </View>
+          <Animated.View
+            style={{
+              height: phoneHeight + detailsHeight,
+              transform: [{ translateY }],
+            }}
+          >
+            <MockCalendar day={14} fullHeight />
           </Animated.View>
-          <Animated.View style={chevronStyle} className="absolute bottom-6 left-0 right-0 items-center">
+          <Animated.View
+            style={chevronStyle}
+            className="absolute bottom-6 left-0 right-0 items-center"
+          >
             <Feather name="chevron-down" size={32} color="#d1d5db" />
           </Animated.View>
         </View>
@@ -465,7 +491,9 @@ const Step4Visual: React.FC<PhoneStepProps> = ({ title, description, phoneWidth,
               className="flex-1 border-r-2 border-dashed border-blue-200/50 bg-blue-500/15 items-center justify-center gap-4"
             >
               <View className="rounded-full bg-blue-500/10 px-4 py-2">
-                <Text className="text-[11px] font-black tracking-[0.2em] text-blue-500/70">BACK</Text>
+                <Text className="text-[11px] font-black tracking-[0.2em] text-blue-500/70">
+                  BACK
+                </Text>
               </View>
               <Feather name="arrow-left" size={30} color="#bfdbfe" />
             </Animated.View>
