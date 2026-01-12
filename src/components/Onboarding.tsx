@@ -399,6 +399,37 @@ const Step3Visual: React.FC<PhoneStepProps> = ({ title, description, phoneWidth,
             }}
           >
             <MockCalendar day={14} fullHeight />
+            <View style={{ height: detailsHeight }} className="w-full px-8 pt-4">
+              <View className="mb-5">
+                <View className="h-2.5 w-24 rounded-full bg-gray-100" />
+                <View className="mt-3 h-2 w-full rounded-full bg-gray-50" />
+                <View className="mt-2 h-2 w-5/6 rounded-full bg-gray-50" />
+              </View>
+              <View className="gap-4">
+                <View className="flex-row items-center gap-3">
+                  <View className="h-9 w-9 rounded-full bg-gray-100" />
+                  <View className="flex-1">
+                    <View className="h-2.5 w-16 rounded-full bg-gray-100" />
+                    <View className="mt-2 h-2 w-full rounded-full bg-gray-50" />
+                  </View>
+                </View>
+                <View className="flex-row items-center gap-3">
+                  <View className="h-9 w-9 rounded-full bg-gray-100" />
+                  <View className="flex-1">
+                    <View className="h-2.5 w-20 rounded-full bg-gray-100" />
+                    <View className="mt-2 h-2 w-5/6 rounded-full bg-gray-50" />
+                  </View>
+                </View>
+                <View className="flex-row items-center gap-3">
+                  <View className="h-9 w-9 rounded-full bg-gray-100" />
+                  <View className="flex-1">
+                    <View className="h-2.5 w-16 rounded-full bg-gray-100" />
+                    <View className="mt-2 h-2 w-4/5 rounded-full bg-gray-50" />
+                  </View>
+                </View>
+              </View>
+              <View className="mt-5 h-8 w-full rounded-full bg-gray-50" />
+            </View>
           </Animated.View>
 
           <Animated.View
@@ -406,6 +437,10 @@ const Step3Visual: React.FC<PhoneStepProps> = ({ title, description, phoneWidth,
             className="absolute bottom-6 left-0 right-0 items-center"
           >
             <Feather name="chevron-down" size={32} color="#d1d5db" />
+            <Animated.View
+              style={dividerStyle}
+              className="mt-2 h-[2px] w-28 rounded-full bg-gray-200"
+            />
           </Animated.View>
         </View>
       </PhoneMockup>
