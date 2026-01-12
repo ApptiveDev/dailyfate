@@ -183,21 +183,21 @@ const MockCalendar: React.FC<{
     </View>
     <View className="w-full flex-1 rounded-b-sm bg-white p-4">
       <View className="w-full flex-row justify-between">
-        <Text className="text-[10px] font-bold text-gray-300">2024</Text>
-        <Text className="text-[10px] font-bold text-gray-300">MAY</Text>
+        <Text className="text-[12px] font-bold text-gray-300">2024</Text>
+        <Text className="text-[12px] font-bold text-gray-300">MAY</Text>
       </View>
-      <View className="mt-3 w-full items-center">
+      <View className="mt-12 w-full items-center">
         <Text
-          className={`text-[72px] font-bold text-center ${
+          className={`text-[120px] font-bold text-center ${
             day % 7 === 0 ? 'text-red-500' : 'text-[#191F28]'
           }`}
         >
           {day}
         </Text>
       </View>
-      <View className="mt-6 items-center space-y-3">
-        <View className="h-2 w-32 rounded-full bg-gray-100" />
-        <View className="h-2 w-20 rounded-full bg-gray-50" />
+      <View className="mt-12 items-center gap-4">
+        <View className="h-2 w-32 rounded-full bg-gray-100 " />
+        <View className="h-2 w-20 rounded-full bg-gray-100" />
       </View>
       <View className="mt-48 h-px w-full bg-gray-200" />
     </View>
@@ -400,6 +400,7 @@ const Step3Visual: React.FC<PhoneStepProps> = ({ title, description, phoneWidth,
           >
             <MockCalendar day={14} fullHeight />
           </Animated.View>
+
           <Animated.View
             style={chevronStyle}
             className="absolute bottom-6 left-0 right-0 items-center"
