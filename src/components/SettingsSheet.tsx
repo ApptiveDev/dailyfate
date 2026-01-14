@@ -37,6 +37,8 @@ const ITEM_HEIGHT = 36;
 const VISIBLE_ITEMS = 5;
 const DEFAULT_NOTIFICATION_TIME = '08:00';
 const NOTIFICATION_MINUTE_STEP = 5;
+const DEFAULT_BIRTHDATE = '1990-01-01';
+const MIN_BIRTH_YEAR = 1900;
 
 const pad2 = (value: number) => String(value).padStart(2, '0');
 
@@ -65,6 +67,55 @@ const normalizeMinuteToStep = (minute: string, step: number) => {
   const normalized = Math.floor(numeric / step) * step;
   const bounded = Math.min(Math.max(normalized, 0), 59);
   return pad2(bounded);
+};
+
+const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
+
+const parseBirthdateParts = (value: string, fallback: string, maxYear: number) => {
+  const fallbackMatch = fallback.match(/(\d{4})-(\d{2})-(\d{2})/);
+  const fallbackYearNumber = fallbackMatch ? Number(fallbackMatch[1]) : MIN_BIRTH_YEAR;
+  const fallbackMonthNumber = fallbackMatch ? Number(fallbackMatch[2]) : 1;
+  const fallbackDayNumber = fallbackMatch ? Number(fallbackMatch[3]) : 1;
+
+  const fallbackYear = Math.min(Math.max(fallbackYearNumber, MIN_BIRTH_YEAR), maxYear);
+  const fallbackMonth = Math.min(Math.max(fallbackMonthNumber, 1), 12);
+  const fallbackDay = Math.min(
+    Math.max(fallbackDayNumber, 1),
+    getDaysInMonth(fallbackYear, fallbackMonth),
+  );
+
+  const toFallback = () => ({
+    year: String(fallbackYear),
+    month: pad2(fallbackMonth),
+    day: pad2(fallbackDay),
+  });
+
+  const match = value.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!match) return toFallback();
+
+  const yearNumber = Number(match[1]);
+  const monthNumber = Number(match[2]);
+  const dayNumber = Number(match[3]);
+  if (!Number.isFinite(yearNumber) || !Number.isFinite(monthNumber) || !Number.isFinite(dayNumber)) {
+    return toFallback();
+  }
+
+  const year = Math.min(Math.max(yearNumber, MIN_BIRTH_YEAR), maxYear);
+  const month = Math.min(Math.max(monthNumber, 1), 12);
+  const day = Math.min(Math.max(dayNumber, 1), getDaysInMonth(year, month));
+
+  return {
+    year: String(year),
+    month: pad2(month),
+    day: pad2(day),
+  };
+};
+
+const clampBirthDay = (year: string, month: string, day: string) => {
+  const maxDay = getDaysInMonth(Number(year), Number(month));
+  const dayNumber = Number(day);
+  if (!Number.isFinite(dayNumber)) return pad2(1);
+  return pad2(Math.min(Math.max(dayNumber, 1), maxDay));
 };
 
 const WheelPicker: React.FC<{
@@ -144,9 +195,9 @@ const PickerModal: React.FC<{
   children: React.ReactNode;
 }> = ({ visible, title, onClose, children }) => (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-    <View className="flex-1 justify-end bg-black/40 px-5 pb-8">
+    <View className="flex-1 items-center justify-center bg-black/40 px-6">
       <Pressable className="absolute inset-0" onPress={onClose} />
-      <View className="rounded-2xl bg-white p-5">
+      <View className="w-full max-w-sm rounded-2xl bg-white p-5">
         <View className="mb-4 flex-row items-center justify-between">
           <Text className="text-lg font-extrabold text-gray-900">{title}</Text>
           <Pressable onPress={onClose} hitSlop={10} className="rounded-full px-2 py-1">
@@ -174,8 +225,10 @@ const SettingsSheet: React.FC<Props> = ({
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
+  const [isBirthModalOpen, setIsBirthModalOpen] = useState(false);
   const { isLoading } = useAuth();
   const isBusy = isFetching || isSaving;
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
   const { width: windowWidth } = useWindowDimensions();
   const panelWidth = Math.min(windowWidth * 0.88, 420);
   const panelTranslateX = useRef(new Animated.Value(panelWidth)).current;
@@ -194,6 +247,16 @@ const SettingsSheet: React.FC<Props> = ({
     };
   }, [form.notificationTime]);
 
+  const { year: birthYear, month: birthMonth, day: birthDay } = useMemo(
+    () =>
+      parseBirthdateParts(
+        form.birthdate.trim() || DEFAULT_BIRTHDATE,
+        DEFAULT_BIRTHDATE,
+        currentYear,
+      ),
+    [form.birthdate, currentYear],
+  );
+
   const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => pad2(i)), []);
   const notifyMinuteOptions = useMemo(
     () =>
@@ -202,6 +265,18 @@ const SettingsSheet: React.FC<Props> = ({
       ),
     [],
   );
+  const birthYearOptions = useMemo(
+    () =>
+      Array.from({ length: currentYear - MIN_BIRTH_YEAR + 1 }, (_, i) =>
+        String(currentYear - i),
+      ),
+    [currentYear],
+  );
+  const birthMonthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => pad2(i + 1)), []);
+  const birthDayOptions = useMemo(() => {
+    const daysInMonth = getDaysInMonth(Number(birthYear), Number(birthMonth));
+    return Array.from({ length: daysInMonth }, (_, i) => pad2(i + 1));
+  }, [birthMonth, birthYear]);
 
   useEffect(() => {
     panelWidthRef.current = panelWidth;
@@ -253,6 +328,16 @@ const SettingsSheet: React.FC<Props> = ({
   }, [visible, isRendered, overlayOpacity, panelTranslateX]);
 
   useEffect(() => {
+    const normalizedDay = clampBirthDay(birthYear, birthMonth, birthDay);
+    if (normalizedDay !== birthDay) {
+      setForm((prev) => ({
+        ...prev,
+        birthdate: `${birthYear}-${birthMonth}-${normalizedDay}`,
+      }));
+    }
+  }, [birthDay, birthMonth, birthYear]);
+
+  useEffect(() => {
     if (visible) {
       const trimmed = settings.notificationTime.trim();
       const parsed = parseTimeParts(
@@ -263,17 +348,30 @@ const SettingsSheet: React.FC<Props> = ({
         parsed.minute,
         NOTIFICATION_MINUTE_STEP,
       )}`;
+      const trimmedBirthdate = settings.birthdate.trim();
+      const normalizedBirthdate = trimmedBirthdate
+        ? (() => {
+            const parsedBirthdate = parseBirthdateParts(
+              trimmedBirthdate,
+              DEFAULT_BIRTHDATE,
+              currentYear,
+            );
+            return `${parsedBirthdate.year}-${parsedBirthdate.month}-${parsedBirthdate.day}`;
+          })()
+        : settings.birthdate;
       setForm({
         ...settings,
         notificationTime: trimmed ? normalizedTime : settings.notificationTime,
+        birthdate: trimmedBirthdate ? normalizedBirthdate : settings.birthdate,
       });
     }
-  }, [visible, settings]);
+  }, [visible, settings, currentYear]);
 
   useEffect(() => {
     if (!visible) {
       setIsFetching(false);
       setIsNotifyModalOpen(false);
+      setIsBirthModalOpen(false);
       return;
     }
 
@@ -313,6 +411,10 @@ const SettingsSheet: React.FC<Props> = ({
     if (form.notificationTime.trim() !== normalizedTime) {
       update({ notificationTime: normalizedTime });
     }
+  };
+
+  const openBirthModal = () => {
+    setIsBirthModalOpen(true);
   };
 
   const handleSave = async () => {
@@ -394,7 +496,7 @@ const SettingsSheet: React.FC<Props> = ({
               <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 내 정보
               </Text>
-              <View className="overflow-hidden rounded-xl border border-gray-200 bg-white ">
+              <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
                 <Row label="닉네임">
                   <TextInput
                     value={form.nickname}
@@ -405,13 +507,22 @@ const SettingsSheet: React.FC<Props> = ({
                   />
                 </Row>
                 <Row label="생년월일" divider>
-                  <TextInput
-                    value={form.birthdate}
-                    onChangeText={(text) => update({ birthdate: text })}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor="#d1d5db"
-                    className="min-w-[120] text-right text-[15px] text-gray-900"
-                  />
+                  <Pressable
+                    onPress={openBirthModal}
+                    disabled={isBusy}
+                    className={`flex-row items-center space-x-2 ${
+                      isBusy ? 'opacity-60' : 'active:opacity-70'
+                    }`}
+                  >
+                    <Text
+                      className={`text-[15px] font-semibold ${
+                        form.birthdate.trim() ? 'text-gray-900' : 'text-gray-400'
+                      }`}
+                    >
+                      {form.birthdate.trim() ? form.birthdate : 'YYYY-MM-DD'}
+                    </Text>
+                    <Feather name="chevron-down" size={16} color="#9ca3af" />
+                  </Pressable>
                 </Row>
               </View>
             </View>
@@ -492,6 +603,50 @@ const SettingsSheet: React.FC<Props> = ({
                 onChange={(nextMinute) =>
                   update({ notificationTime: `${notifyHour}:${nextMinute}` })
                 }
+              />
+            </View>
+          </View>
+        </PickerModal>
+
+        <PickerModal
+          visible={isBirthModalOpen}
+          title="생년월일"
+          onClose={() => setIsBirthModalOpen(false)}
+        >
+          <View className="mb-2 flex-row">
+            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">년</Text>
+            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">월</Text>
+            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">일</Text>
+          </View>
+          <View className="flex-row items-center">
+            <View className="flex-1 items-center">
+              <WheelPicker
+                options={birthYearOptions}
+                value={birthYear}
+                onChange={(nextYear) => {
+                  const nextDay = clampBirthDay(nextYear, birthMonth, birthDay);
+                  update({ birthdate: `${nextYear}-${birthMonth}-${nextDay}` });
+                }}
+                itemTextClassName="text-sm"
+              />
+            </View>
+            <View className="flex-1 items-center">
+              <WheelPicker
+                options={birthMonthOptions}
+                value={birthMonth}
+                onChange={(nextMonth) => {
+                  const nextDay = clampBirthDay(birthYear, nextMonth, birthDay);
+                  update({ birthdate: `${birthYear}-${nextMonth}-${nextDay}` });
+                }}
+              />
+            </View>
+            <View className="flex-1 items-center">
+              <WheelPicker
+                options={birthDayOptions}
+                value={birthDay}
+                onChange={(nextDay) => {
+                  update({ birthdate: `${birthYear}-${birthMonth}-${nextDay}` });
+                }}
               />
             </View>
           </View>
