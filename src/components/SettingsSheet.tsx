@@ -581,7 +581,7 @@ const SettingsSheet: React.FC<Props> = ({
                     onChangeText={(text) => update({ nickname: text })}
                     placeholder="입력해주세요"
                     placeholderTextColor="#d1d5db"
-                    className="min-w-[120] text-right text-base text-gray-900"
+                    className="min-w-[120] text-right text-base text-gray-600"
                   />
                 </Row>
                 <Row label="생년월일" divider>
@@ -594,7 +594,7 @@ const SettingsSheet: React.FC<Props> = ({
                   >
                     <Text
                       className={`text-base font-semibold ${
-                        hasBirthdate ? 'text-gray-900' : 'text-gray-400'
+                        hasBirthdate ? 'text-gray-600' : 'text-gray-400'
                       }`}
                     >
                       {hasBirthdate ? birthDateSummary : 'YYYY-MM-DD'}
@@ -611,7 +611,7 @@ const SettingsSheet: React.FC<Props> = ({
                   >
                     <Text
                       className={`text-base font-semibold ${
-                        hasBirthdate ? 'text-gray-900' : 'text-gray-400'
+                        hasBirthdate ? 'text-gray-600' : 'text-gray-400'
                       }`}
                     >
                       {hasBirthdate ? birthTimeSummary : 'HH:MM'}
@@ -634,7 +634,7 @@ const SettingsSheet: React.FC<Props> = ({
                       isBusy ? 'opacity-60' : 'active:opacity-70'
                     }`}
                   >
-                    <Text className="text-base font-semibold text-gray-900">
+                    <Text className="text-base font-semibold text-gray-600">
                       {`${notifyHour}:${notifyMinute}`}
                     </Text>
                   </Pressable>
