@@ -1,5 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  Pressable,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/providers/AuthProvider';
@@ -113,8 +121,9 @@ const LoginScreen: React.FC<Props> = ({
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-white">
-      <View className="p-4 ">
-        <View className="w-full max-w-xl gap-6 rounded-2xl bg-white p-5 ">
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View className="flex-1 p-4 ">
+          <View className="w-full max-w-xl gap-6 rounded-2xl bg-white p-5 ">
           <View className="gap-4">
             <Text className="text-4xl font-extrabold text-gray-900">{title}</Text>
             <Text className="text-xl text-gray-500">{description}</Text>
@@ -191,8 +200,9 @@ const LoginScreen: React.FC<Props> = ({
               </Text>
             </Pressable>
           )}
+          </View>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 };
