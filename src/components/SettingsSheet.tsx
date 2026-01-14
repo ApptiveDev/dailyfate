@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -9,6 +11,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { UserSettings } from '../types/fortune';
@@ -173,6 +176,12 @@ const SettingsSheet: React.FC<Props> = ({
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const { isLoading } = useAuth();
   const isBusy = isFetching || isSaving;
+  const { width: windowWidth } = useWindowDimensions();
+  const panelWidth = Math.min(windowWidth * 0.88, 420);
+  const panelTranslateX = useRef(new Animated.Value(panelWidth)).current;
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const [isRendered, setIsRendered] = useState(visible);
+  const panelWidthRef = useRef(panelWidth);
 
   const { hour: notifyHour, minute: notifyMinute } = useMemo(() => {
     const parsed = parseTimeParts(
@@ -193,6 +202,55 @@ const SettingsSheet: React.FC<Props> = ({
       ),
     [],
   );
+
+  useEffect(() => {
+    panelWidthRef.current = panelWidth;
+    if (!visible && !isRendered) {
+      panelTranslateX.setValue(panelWidth);
+      overlayOpacity.setValue(0);
+    }
+  }, [panelWidth, isRendered, overlayOpacity, panelTranslateX, visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    setIsRendered(true);
+    panelTranslateX.setValue(panelWidthRef.current);
+    overlayOpacity.setValue(0);
+    Animated.parallel([
+      Animated.timing(panelTranslateX, {
+        toValue: 0,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible, overlayOpacity, panelTranslateX]);
+
+  useEffect(() => {
+    if (visible || !isRendered) return;
+    Animated.parallel([
+      Animated.timing(panelTranslateX, {
+        toValue: panelWidthRef.current,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setIsRendered(false);
+    });
+  }, [visible, isRendered, overlayOpacity, panelTranslateX]);
 
   useEffect(() => {
     if (visible) {
@@ -282,105 +340,130 @@ const SettingsSheet: React.FC<Props> = ({
 
   const insets = useSafeAreaInsets();
 
+  if (!isRendered) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={isRendered} animationType="none" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
-        className="flex-1 justify-end bg-black/25 "
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <Pressable className="absolute inset-0" onPress={onClose} />
-
-        <View
-          className="gap-4 rounded-t-2xl bg-stone-100 px-4 pb-6 pt-3 bg-white"
-          style={{ paddingBottom: 24 + insets.bottom }}
-        >
-          <View className="flex-row items-center justify-between py-2">
-            <View className="flex-row items-center space-x-2">
-              <Text className="text-lg font-extrabold text-gray-900">설정</Text>
-              {isFetching && <ActivityIndicator size="small" color="#6b7280" />}
-            </View>
-            <Pressable
-              onPress={onClose}
-              hitSlop={12}
-              className="rounded-full p-2 active:opacity-70"
-            >
-              <Feather name="x" size={22} color="#6b7280" />
-            </Pressable>
-          </View>
-
-          <View className="gap-4">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              내 정보
-            </Text>
-            <View className="overflow-hidden rounded-xl border border-gray-200 bg-white ">
-              <Row label="닉네임">
-                <TextInput
-                  value={form.nickname}
-                  onChangeText={(text) => update({ nickname: text })}
-                  placeholder="입력해주세요"
-                  placeholderTextColor="#d1d5db"
-                  className="min-w-[120] text-right text-[15px] text-gray-900"
-                />
-              </Row>
-              <Row label="생년월일" divider>
-                <TextInput
-                  value={form.birthdate}
-                  onChangeText={(text) => update({ birthdate: text })}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#d1d5db"
-                  className="min-w-[120] text-right text-[15px] text-gray-900"
-                />
-              </Row>
-            </View>
-          </View>
-
-          <View className="gap-4">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              알림
-            </Text>
-            <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-              <Row label="알림 시간">
-                <Pressable
-                  onPress={openNotifyModal}
-                  disabled={isBusy}
-                  className={`flex-row items-center space-x-2 ${
-                    isBusy ? 'opacity-60' : 'active:opacity-70'
-                  }`}
-                >
-                  <Text className="text-[15px] font-semibold text-gray-900">
-                    {`${notifyHour}:${notifyMinute}`}
-                  </Text>
-                  <Feather name="chevron-down" size={16} color="#9ca3af" />
-                </Pressable>
-              </Row>
-            </View>
-          </View>
-
+        <View className="flex-1">
+          <Animated.View
+            pointerEvents="none"
+            className="absolute inset-0 bg-black/40"
+            style={{ opacity: overlayOpacity }}
+          />
           <Pressable
-            className={`rounded-xl py-3.5 active:opacity-90 ${
-              isBusy ? 'bg-gray-900/60' : 'bg-gray-900'
-            }`}
-            onPress={handleSave}
-            disabled={isBusy}
-          >
-            <View className="flex-row items-center justify-center space-x-2">
-              {isSaving && <ActivityIndicator size="small" color="#fff" />}
-              <Text className="text-center text-lg font-extrabold text-white">저장하기</Text>
-            </View>
-          </Pressable>
+            className="absolute inset-0"
+            onPress={onClose}
+            accessibilityLabel="설정 닫기"
+          />
 
-          <View className="gap-4">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              계정
-            </Text>
+          <Animated.View
+            className="absolute bottom-0 right-0 top-0 gap-4 rounded-l-2xl border-l border-gray-200 bg-white px-4"
+            style={[
+              {
+                width: panelWidth,
+                paddingTop: insets.top + 8,
+                paddingBottom: 24 + insets.bottom,
+                transform: [{ translateX: panelTranslateX }],
+                shadowColor: '#000',
+                shadowOpacity: 0.14,
+                shadowRadius: 18,
+                shadowOffset: { width: -6, height: 0 },
+                elevation: 12,
+              },
+            ]}
+          >
+            <View className="flex-row items-center justify-between py-2">
+              <View className="flex-row items-center space-x-2">
+                <Text className="text-lg font-extrabold text-gray-900">설정</Text>
+                {isFetching && <ActivityIndicator size="small" color="#6b7280" />}
+              </View>
+              <Pressable
+                onPress={onClose}
+                hitSlop={12}
+                className="rounded-full p-2 active:opacity-70"
+              >
+                <Feather name="x" size={22} color="#6b7280" />
+              </Pressable>
+            </View>
+
+            <View className="gap-4">
+              <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                내 정보
+              </Text>
+              <View className="overflow-hidden rounded-xl border border-gray-200 bg-white ">
+                <Row label="닉네임">
+                  <TextInput
+                    value={form.nickname}
+                    onChangeText={(text) => update({ nickname: text })}
+                    placeholder="입력해주세요"
+                    placeholderTextColor="#d1d5db"
+                    className="min-w-[120] text-right text-[15px] text-gray-900"
+                  />
+                </Row>
+                <Row label="생년월일" divider>
+                  <TextInput
+                    value={form.birthdate}
+                    onChangeText={(text) => update({ birthdate: text })}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor="#d1d5db"
+                    className="min-w-[120] text-right text-[15px] text-gray-900"
+                  />
+                </Row>
+              </View>
+            </View>
+
+            <View className="gap-4">
+              <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                알림
+              </Text>
+              <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <Row label="알림 시간">
+                  <Pressable
+                    onPress={openNotifyModal}
+                    disabled={isBusy}
+                    className={`flex-row items-center space-x-2 ${
+                      isBusy ? 'opacity-60' : 'active:opacity-70'
+                    }`}
+                  >
+                    <Text className="text-[15px] font-semibold text-gray-900">
+                      {`${notifyHour}:${notifyMinute}`}
+                    </Text>
+                    <Feather name="chevron-down" size={16} color="#9ca3af" />
+                  </Pressable>
+                </Row>
+              </View>
+            </View>
+
             <Pressable
-              className="rounded-xl border border-rose-200 bg-rose-50 py-3.5 active:opacity-90"
-              onPress={handleLogout}
-              disabled={isLoading}
+              className={`rounded-xl py-3.5 active:opacity-90 ${
+                isBusy ? 'bg-gray-900/60' : 'bg-gray-900'
+              }`}
+              onPress={handleSave}
+              disabled={isBusy}
             >
-              <Text className="text-center text-base font-bold text-rose-600">로그아웃</Text>
+              <View className="flex-row items-center justify-center space-x-2">
+                {isSaving && <ActivityIndicator size="small" color="#fff" />}
+                <Text className="text-center text-lg font-extrabold text-white">저장하기</Text>
+              </View>
             </Pressable>
-          </View>
+
+            <View className="gap-4">
+              <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                계정
+              </Text>
+              <Pressable
+                className="rounded-xl border border-rose-200 bg-rose-50 py-3.5 active:opacity-90"
+                onPress={handleLogout}
+                disabled={isLoading}
+              >
+                <Text className="text-center text-base font-bold text-rose-600">로그아웃</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
         </View>
 
         <PickerModal
