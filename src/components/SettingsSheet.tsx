@@ -38,9 +38,24 @@ const VISIBLE_ITEMS = 5;
 const DEFAULT_NOTIFICATION_TIME = '08:00';
 const NOTIFICATION_MINUTE_STEP = 5;
 const DEFAULT_BIRTHDATE = '1990-01-01';
+const DEFAULT_BIRTH_TIME = '00:00';
 const MIN_BIRTH_YEAR = 1900;
 
 const pad2 = (value: number) => String(value).padStart(2, '0');
+
+const splitDateTime = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return { datePart: '', timePart: '' };
+  if (trimmed.includes('T')) {
+    const [datePart, timePart = ''] = trimmed.split('T');
+    return { datePart, timePart };
+  }
+  if (trimmed.includes(' ')) {
+    const [datePart, timePart = ''] = trimmed.split(' ');
+    return { datePart, timePart };
+  }
+  return { datePart: trimmed, timePart: '' };
+};
 
 const parseTimeParts = (value: string, fallback: string) => {
   const [fallbackHour, fallbackMinute] = fallback.split(':');
@@ -116,6 +131,21 @@ const clampBirthDay = (year: string, month: string, day: string) => {
   const dayNumber = Number(day);
   if (!Number.isFinite(dayNumber)) return pad2(1);
   return pad2(Math.min(Math.max(dayNumber, 1), maxDay));
+};
+
+const buildBirthDateTime = (
+  year: string,
+  month: string,
+  day: string,
+  hour: string,
+  minute: string,
+) => {
+  const yearNumber = Number(year) || MIN_BIRTH_YEAR;
+  const monthNumber = Number(month) || 1;
+  const safeDay = clampBirthDay(String(yearNumber), pad2(monthNumber), day);
+  const safeHour = pad2(Number(hour) || 0);
+  const safeMinute = pad2(Number(minute) || 0);
+  return `${yearNumber}-${pad2(monthNumber)}-${safeDay} ${safeHour}:${safeMinute}:00`;
 };
 
 const WheelPicker: React.FC<{
@@ -226,6 +256,7 @@ const SettingsSheet: React.FC<Props> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const [isBirthModalOpen, setIsBirthModalOpen] = useState(false);
+  const [isBirthTimeModalOpen, setIsBirthTimeModalOpen] = useState(false);
   const { isLoading } = useAuth();
   const isBusy = isFetching || isSaving;
   const currentYear = useMemo(() => new Date().getFullYear(), []);
@@ -247,17 +278,29 @@ const SettingsSheet: React.FC<Props> = ({
     };
   }, [form.notificationTime]);
 
+  const { datePart: rawBirthDatePart, timePart: rawBirthTimePart } = useMemo(
+    () => splitDateTime(form.birthdate),
+    [form.birthdate],
+  );
+  const birthDatePart = rawBirthDatePart || DEFAULT_BIRTHDATE;
+  const birthTimePart = rawBirthTimePart || DEFAULT_BIRTH_TIME;
+
   const { year: birthYear, month: birthMonth, day: birthDay } = useMemo(
     () =>
       parseBirthdateParts(
-        form.birthdate.trim() || DEFAULT_BIRTHDATE,
+        birthDatePart,
         DEFAULT_BIRTHDATE,
         currentYear,
       ),
-    [form.birthdate, currentYear],
+    [birthDatePart, currentYear],
+  );
+  const { hour: birthHour, minute: birthMinute } = useMemo(
+    () => parseTimeParts(birthTimePart, DEFAULT_BIRTH_TIME),
+    [birthTimePart],
   );
 
   const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => pad2(i)), []);
+  const birthMinuteOptions = useMemo(() => Array.from({ length: 60 }, (_, i) => pad2(i)), []);
   const notifyMinuteOptions = useMemo(
     () =>
       Array.from({ length: 60 / NOTIFICATION_MINUTE_STEP }, (_, i) =>
@@ -328,14 +371,21 @@ const SettingsSheet: React.FC<Props> = ({
   }, [visible, isRendered, overlayOpacity, panelTranslateX]);
 
   useEffect(() => {
+    if (!form.birthdate.trim()) return;
     const normalizedDay = clampBirthDay(birthYear, birthMonth, birthDay);
     if (normalizedDay !== birthDay) {
       setForm((prev) => ({
         ...prev,
-        birthdate: `${birthYear}-${birthMonth}-${normalizedDay}`,
+        birthdate: buildBirthDateTime(
+          birthYear,
+          birthMonth,
+          normalizedDay,
+          birthHour,
+          birthMinute,
+        ),
       }));
     }
-  }, [birthDay, birthMonth, birthYear]);
+  }, [birthDay, birthMonth, birthYear, birthHour, birthMinute, form.birthdate]);
 
   useEffect(() => {
     if (visible) {
@@ -351,12 +401,20 @@ const SettingsSheet: React.FC<Props> = ({
       const trimmedBirthdate = settings.birthdate.trim();
       const normalizedBirthdate = trimmedBirthdate
         ? (() => {
+            const { datePart, timePart } = splitDateTime(trimmedBirthdate);
             const parsedBirthdate = parseBirthdateParts(
-              trimmedBirthdate,
+              datePart || DEFAULT_BIRTHDATE,
               DEFAULT_BIRTHDATE,
               currentYear,
             );
-            return `${parsedBirthdate.year}-${parsedBirthdate.month}-${parsedBirthdate.day}`;
+            const parsedTime = parseTimeParts(timePart || DEFAULT_BIRTH_TIME, DEFAULT_BIRTH_TIME);
+            return buildBirthDateTime(
+              parsedBirthdate.year,
+              parsedBirthdate.month,
+              parsedBirthdate.day,
+              parsedTime.hour,
+              parsedTime.minute,
+            );
           })()
         : settings.birthdate;
       setForm({
@@ -372,6 +430,7 @@ const SettingsSheet: React.FC<Props> = ({
       setIsFetching(false);
       setIsNotifyModalOpen(false);
       setIsBirthModalOpen(false);
+      setIsBirthTimeModalOpen(false);
       return;
     }
 
@@ -407,6 +466,8 @@ const SettingsSheet: React.FC<Props> = ({
 
   const openNotifyModal = () => {
     setIsNotifyModalOpen(true);
+    setIsBirthModalOpen(false);
+    setIsBirthTimeModalOpen(false);
     const normalizedTime = `${notifyHour}:${notifyMinute}`;
     if (form.notificationTime.trim() !== normalizedTime) {
       update({ notificationTime: normalizedTime });
@@ -415,7 +476,29 @@ const SettingsSheet: React.FC<Props> = ({
 
   const openBirthModal = () => {
     setIsBirthModalOpen(true);
+    setIsBirthTimeModalOpen(false);
+    setIsNotifyModalOpen(false);
+    if (!form.birthdate.trim()) {
+      update({
+        birthdate: buildBirthDateTime(birthYear, birthMonth, birthDay, birthHour, birthMinute),
+      });
+    }
   };
+
+  const openBirthTimeModal = () => {
+    setIsBirthTimeModalOpen(true);
+    setIsBirthModalOpen(false);
+    setIsNotifyModalOpen(false);
+    if (!form.birthdate.trim()) {
+      update({
+        birthdate: buildBirthDateTime(birthYear, birthMonth, birthDay, birthHour, birthMinute),
+      });
+    }
+  };
+
+  const birthDateSummary = `${birthYear}-${birthMonth}-${birthDay}`;
+  const birthTimeSummary = `${birthHour}:${birthMinute}`;
+  const hasBirthdate = form.birthdate.trim() !== '';
 
   const handleSave = async () => {
     if (isBusy) return;
@@ -497,7 +580,7 @@ const SettingsSheet: React.FC<Props> = ({
                 내 정보
               </Text>
               <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-                <Row label="닉네임">
+                <Row label="닉네임" divider>
                   <TextInput
                     value={form.nickname}
                     onChangeText={(text) => update({ nickname: text })}
@@ -516,10 +599,28 @@ const SettingsSheet: React.FC<Props> = ({
                   >
                     <Text
                       className={`text-[15px] font-semibold ${
-                        form.birthdate.trim() ? 'text-gray-900' : 'text-gray-400'
+                        hasBirthdate ? 'text-gray-900' : 'text-gray-400'
                       }`}
                     >
-                      {form.birthdate.trim() ? form.birthdate : 'YYYY-MM-DD'}
+                      {hasBirthdate ? birthDateSummary : 'YYYY-MM-DD'}
+                    </Text>
+                    <Feather name="chevron-down" size={16} color="#9ca3af" />
+                  </Pressable>
+                </Row>
+                <Row label="출생시간">
+                  <Pressable
+                    onPress={openBirthTimeModal}
+                    disabled={isBusy}
+                    className={`flex-row items-center space-x-2 ${
+                      isBusy ? 'opacity-60' : 'active:opacity-70'
+                    }`}
+                  >
+                    <Text
+                      className={`text-[15px] font-semibold ${
+                        hasBirthdate ? 'text-gray-900' : 'text-gray-400'
+                      }`}
+                    >
+                      {hasBirthdate ? birthTimeSummary : 'HH:MM'}
                     </Text>
                     <Feather name="chevron-down" size={16} color="#9ca3af" />
                   </Pressable>
@@ -625,7 +726,15 @@ const SettingsSheet: React.FC<Props> = ({
                 value={birthYear}
                 onChange={(nextYear) => {
                   const nextDay = clampBirthDay(nextYear, birthMonth, birthDay);
-                  update({ birthdate: `${nextYear}-${birthMonth}-${nextDay}` });
+                  update({
+                    birthdate: buildBirthDateTime(
+                      nextYear,
+                      birthMonth,
+                      nextDay,
+                      birthHour,
+                      birthMinute,
+                    ),
+                  });
                 }}
                 itemTextClassName="text-sm"
               />
@@ -636,7 +745,15 @@ const SettingsSheet: React.FC<Props> = ({
                 value={birthMonth}
                 onChange={(nextMonth) => {
                   const nextDay = clampBirthDay(birthYear, nextMonth, birthDay);
-                  update({ birthdate: `${birthYear}-${nextMonth}-${nextDay}` });
+                  update({
+                    birthdate: buildBirthDateTime(
+                      birthYear,
+                      nextMonth,
+                      nextDay,
+                      birthHour,
+                      birthMinute,
+                    ),
+                  });
                 }}
               />
             </View>
@@ -645,8 +762,63 @@ const SettingsSheet: React.FC<Props> = ({
                 options={birthDayOptions}
                 value={birthDay}
                 onChange={(nextDay) => {
-                  update({ birthdate: `${birthYear}-${birthMonth}-${nextDay}` });
+                  update({
+                    birthdate: buildBirthDateTime(
+                      birthYear,
+                      birthMonth,
+                      nextDay,
+                      birthHour,
+                      birthMinute,
+                    ),
+                  });
                 }}
+              />
+            </View>
+          </View>
+        </PickerModal>
+
+        <PickerModal
+          visible={isBirthTimeModalOpen}
+          title="출생시간"
+          onClose={() => setIsBirthTimeModalOpen(false)}
+        >
+          <View className="mb-2 flex-row">
+            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">시</Text>
+            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">분</Text>
+          </View>
+          <View className="flex-row items-center">
+            <View className="flex-1 items-center">
+              <WheelPicker
+                options={hourOptions}
+                value={birthHour}
+                onChange={(nextHour) =>
+                  update({
+                    birthdate: buildBirthDateTime(
+                      birthYear,
+                      birthMonth,
+                      birthDay,
+                      nextHour,
+                      birthMinute,
+                    ),
+                  })
+                }
+              />
+            </View>
+            <View className="flex-1 items-center">
+              <WheelPicker
+                options={birthMinuteOptions}
+                value={birthMinute}
+                onChange={(nextMinute) =>
+                  update({
+                    birthdate: buildBirthDateTime(
+                      birthYear,
+                      birthMonth,
+                      birthDay,
+                      birthHour,
+                      nextMinute,
+                    ),
+                  })
+                }
               />
             </View>
           </View>
