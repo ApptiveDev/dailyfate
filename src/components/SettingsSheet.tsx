@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -9,6 +11,7 @@ import {
   ScrollView,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { UserSettings } from '../types/fortune';
@@ -30,12 +33,29 @@ interface Props {
   onUnauthorized: () => void;
 }
 
-const ITEM_HEIGHT = 36;
+const ITEM_HEIGHT = 40;
 const VISIBLE_ITEMS = 5;
 const DEFAULT_NOTIFICATION_TIME = '08:00';
 const NOTIFICATION_MINUTE_STEP = 5;
+const DEFAULT_BIRTHDATE = '1990-01-01';
+const DEFAULT_BIRTH_TIME = '00:00';
+const MIN_BIRTH_YEAR = 1900;
 
 const pad2 = (value: number) => String(value).padStart(2, '0');
+
+const splitDateTime = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return { datePart: '', timePart: '' };
+  if (trimmed.includes('T')) {
+    const [datePart, timePart = ''] = trimmed.split('T');
+    return { datePart, timePart };
+  }
+  if (trimmed.includes(' ')) {
+    const [datePart, timePart = ''] = trimmed.split(' ');
+    return { datePart, timePart };
+  }
+  return { datePart: trimmed, timePart: '' };
+};
 
 const parseTimeParts = (value: string, fallback: string) => {
   const [fallbackHour, fallbackMinute] = fallback.split(':');
@@ -64,12 +84,80 @@ const normalizeMinuteToStep = (minute: string, step: number) => {
   return pad2(bounded);
 };
 
+const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
+
+const parseBirthdateParts = (value: string, fallback: string, maxYear: number) => {
+  const fallbackMatch = fallback.match(/(\d{4})-(\d{2})-(\d{2})/);
+  const fallbackYearNumber = fallbackMatch ? Number(fallbackMatch[1]) : MIN_BIRTH_YEAR;
+  const fallbackMonthNumber = fallbackMatch ? Number(fallbackMatch[2]) : 1;
+  const fallbackDayNumber = fallbackMatch ? Number(fallbackMatch[3]) : 1;
+
+  const fallbackYear = Math.min(Math.max(fallbackYearNumber, MIN_BIRTH_YEAR), maxYear);
+  const fallbackMonth = Math.min(Math.max(fallbackMonthNumber, 1), 12);
+  const fallbackDay = Math.min(
+    Math.max(fallbackDayNumber, 1),
+    getDaysInMonth(fallbackYear, fallbackMonth),
+  );
+
+  const toFallback = () => ({
+    year: String(fallbackYear),
+    month: pad2(fallbackMonth),
+    day: pad2(fallbackDay),
+  });
+
+  const match = value.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!match) return toFallback();
+
+  const yearNumber = Number(match[1]);
+  const monthNumber = Number(match[2]);
+  const dayNumber = Number(match[3]);
+  if (
+    !Number.isFinite(yearNumber) ||
+    !Number.isFinite(monthNumber) ||
+    !Number.isFinite(dayNumber)
+  ) {
+    return toFallback();
+  }
+
+  const year = Math.min(Math.max(yearNumber, MIN_BIRTH_YEAR), maxYear);
+  const month = Math.min(Math.max(monthNumber, 1), 12);
+  const day = Math.min(Math.max(dayNumber, 1), getDaysInMonth(year, month));
+
+  return {
+    year: String(year),
+    month: pad2(month),
+    day: pad2(day),
+  };
+};
+
+const clampBirthDay = (year: string, month: string, day: string) => {
+  const maxDay = getDaysInMonth(Number(year), Number(month));
+  const dayNumber = Number(day);
+  if (!Number.isFinite(dayNumber)) return pad2(1);
+  return pad2(Math.min(Math.max(dayNumber, 1), maxDay));
+};
+
+const buildBirthDateTime = (
+  year: string,
+  month: string,
+  day: string,
+  hour: string,
+  minute: string,
+) => {
+  const yearNumber = Number(year) || MIN_BIRTH_YEAR;
+  const monthNumber = Number(month) || 1;
+  const safeDay = clampBirthDay(String(yearNumber), pad2(monthNumber), day);
+  const safeHour = pad2(Number(hour) || 0);
+  const safeMinute = pad2(Number(minute) || 0);
+  return `${yearNumber}-${pad2(monthNumber)}-${safeDay} ${safeHour}:${safeMinute}:00`;
+};
+
 const WheelPicker: React.FC<{
   options: string[];
   value: string;
   onChange: (value: string) => void;
   itemTextClassName?: string;
-}> = ({ options, value, onChange, itemTextClassName = 'text-base' }) => {
+}> = ({ options, value, onChange, itemTextClassName = 'text-lg' }) => {
   const scrollRef = useRef<ScrollView | null>(null);
   const padding = ((VISIBLE_ITEMS - 1) / 2) * ITEM_HEIGHT;
 
@@ -141,18 +229,18 @@ const PickerModal: React.FC<{
   children: React.ReactNode;
 }> = ({ visible, title, onClose, children }) => (
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-    <View className="flex-1 justify-end bg-black/40 px-5 pb-8">
+    <View className="flex-1 items-center justify-center bg-black/40 px-6">
       <Pressable className="absolute inset-0" onPress={onClose} />
-      <View className="rounded-2xl bg-white p-5">
-        <View className="mb-4 flex-row items-center justify-between">
-          <Text className="text-lg font-extrabold text-gray-900">{title}</Text>
+      <View className="w-full max-w-sm rounded-2xl bg-white p-6">
+        <View className="mb-5 flex-row items-center justify-between">
+          <Text className="text-xl font-extrabold text-gray-900">{title}</Text>
           <Pressable onPress={onClose} hitSlop={10} className="rounded-full px-2 py-1">
-            <Text className="text-sm font-semibold text-gray-500">닫기</Text>
+            <Text className="text-base font-semibold text-gray-500">닫기</Text>
           </Pressable>
         </View>
         {children}
-        <Pressable className="mt-4 rounded-xl bg-gray-900 py-3" onPress={onClose}>
-          <Text className="text-center text-base font-bold text-white">완료</Text>
+        <Pressable className="mt-5 rounded-xl bg-gray-900 py-3.5" onPress={onClose}>
+          <Text className="text-center text-lg font-bold text-white">완료</Text>
         </Pressable>
       </View>
     </View>
@@ -171,8 +259,17 @@ const SettingsSheet: React.FC<Props> = ({
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
+  const [isBirthModalOpen, setIsBirthModalOpen] = useState(false);
+  const [isBirthTimeModalOpen, setIsBirthTimeModalOpen] = useState(false);
   const { isLoading } = useAuth();
   const isBusy = isFetching || isSaving;
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
+  const { width: windowWidth } = useWindowDimensions();
+  const panelWidth = Math.min(windowWidth * 0.88, 420);
+  const panelTranslateX = useRef(new Animated.Value(panelWidth)).current;
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const [isRendered, setIsRendered] = useState(visible);
+  const panelWidthRef = useRef(panelWidth);
 
   const { hour: notifyHour, minute: notifyMinute } = useMemo(() => {
     const parsed = parseTimeParts(
@@ -185,7 +282,28 @@ const SettingsSheet: React.FC<Props> = ({
     };
   }, [form.notificationTime]);
 
+  const { datePart: rawBirthDatePart, timePart: rawBirthTimePart } = useMemo(
+    () => splitDateTime(form.birthdate),
+    [form.birthdate],
+  );
+  const birthDatePart = rawBirthDatePart || DEFAULT_BIRTHDATE;
+  const birthTimePart = rawBirthTimePart || DEFAULT_BIRTH_TIME;
+
+  const {
+    year: birthYear,
+    month: birthMonth,
+    day: birthDay,
+  } = useMemo(
+    () => parseBirthdateParts(birthDatePart, DEFAULT_BIRTHDATE, currentYear),
+    [birthDatePart, currentYear],
+  );
+  const { hour: birthHour, minute: birthMinute } = useMemo(
+    () => parseTimeParts(birthTimePart, DEFAULT_BIRTH_TIME),
+    [birthTimePart],
+  );
+
   const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => pad2(i)), []);
+  const birthMinuteOptions = useMemo(() => Array.from({ length: 60 }, (_, i) => pad2(i)), []);
   const notifyMinuteOptions = useMemo(
     () =>
       Array.from({ length: 60 / NOTIFICATION_MINUTE_STEP }, (_, i) =>
@@ -193,6 +311,76 @@ const SettingsSheet: React.FC<Props> = ({
       ),
     [],
   );
+  const birthYearOptions = useMemo(
+    () =>
+      Array.from({ length: currentYear - MIN_BIRTH_YEAR + 1 }, (_, i) => String(currentYear - i)),
+    [currentYear],
+  );
+  const birthMonthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => pad2(i + 1)), []);
+  const birthDayOptions = useMemo(() => {
+    const daysInMonth = getDaysInMonth(Number(birthYear), Number(birthMonth));
+    return Array.from({ length: daysInMonth }, (_, i) => pad2(i + 1));
+  }, [birthMonth, birthYear]);
+
+  useEffect(() => {
+    panelWidthRef.current = panelWidth;
+    if (!visible && !isRendered) {
+      panelTranslateX.setValue(panelWidth);
+      overlayOpacity.setValue(0);
+    }
+  }, [panelWidth, isRendered, overlayOpacity, panelTranslateX, visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    setIsRendered(true);
+    panelTranslateX.setValue(panelWidthRef.current);
+    overlayOpacity.setValue(0);
+    Animated.parallel([
+      Animated.timing(panelTranslateX, {
+        toValue: 0,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible, overlayOpacity, panelTranslateX]);
+
+  useEffect(() => {
+    if (visible || !isRendered) return;
+    Animated.parallel([
+      Animated.timing(panelTranslateX, {
+        toValue: panelWidthRef.current,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setIsRendered(false);
+    });
+  }, [visible, isRendered, overlayOpacity, panelTranslateX]);
+
+  useEffect(() => {
+    if (!form.birthdate.trim()) return;
+    const normalizedDay = clampBirthDay(birthYear, birthMonth, birthDay);
+    if (normalizedDay !== birthDay) {
+      setForm((prev) => ({
+        ...prev,
+        birthdate: buildBirthDateTime(birthYear, birthMonth, normalizedDay, birthHour, birthMinute),
+      }));
+    }
+  }, [birthDay, birthMonth, birthYear, birthHour, birthMinute, form.birthdate]);
 
   useEffect(() => {
     if (visible) {
@@ -205,17 +393,39 @@ const SettingsSheet: React.FC<Props> = ({
         parsed.minute,
         NOTIFICATION_MINUTE_STEP,
       )}`;
+      const trimmedBirthdate = settings.birthdate.trim();
+      const normalizedBirthdate = trimmedBirthdate
+        ? (() => {
+            const { datePart, timePart } = splitDateTime(trimmedBirthdate);
+            const parsedBirthdate = parseBirthdateParts(
+              datePart || DEFAULT_BIRTHDATE,
+              DEFAULT_BIRTHDATE,
+              currentYear,
+            );
+            const parsedTime = parseTimeParts(timePart || DEFAULT_BIRTH_TIME, DEFAULT_BIRTH_TIME);
+            return buildBirthDateTime(
+              parsedBirthdate.year,
+              parsedBirthdate.month,
+              parsedBirthdate.day,
+              parsedTime.hour,
+              parsedTime.minute,
+            );
+          })()
+        : settings.birthdate;
       setForm({
         ...settings,
         notificationTime: trimmed ? normalizedTime : settings.notificationTime,
+        birthdate: trimmedBirthdate ? normalizedBirthdate : settings.birthdate,
       });
     }
-  }, [visible, settings]);
+  }, [visible, settings, currentYear]);
 
   useEffect(() => {
     if (!visible) {
       setIsFetching(false);
       setIsNotifyModalOpen(false);
+      setIsBirthModalOpen(false);
+      setIsBirthTimeModalOpen(false);
       return;
     }
 
@@ -251,11 +461,39 @@ const SettingsSheet: React.FC<Props> = ({
 
   const openNotifyModal = () => {
     setIsNotifyModalOpen(true);
+    setIsBirthModalOpen(false);
+    setIsBirthTimeModalOpen(false);
     const normalizedTime = `${notifyHour}:${notifyMinute}`;
     if (form.notificationTime.trim() !== normalizedTime) {
       update({ notificationTime: normalizedTime });
     }
   };
+
+  const openBirthModal = () => {
+    setIsBirthModalOpen(true);
+    setIsBirthTimeModalOpen(false);
+    setIsNotifyModalOpen(false);
+    if (!form.birthdate.trim()) {
+      update({
+        birthdate: buildBirthDateTime(birthYear, birthMonth, birthDay, birthHour, birthMinute),
+      });
+    }
+  };
+
+  const openBirthTimeModal = () => {
+    setIsBirthTimeModalOpen(true);
+    setIsBirthModalOpen(false);
+    setIsNotifyModalOpen(false);
+    if (!form.birthdate.trim()) {
+      update({
+        birthdate: buildBirthDateTime(birthYear, birthMonth, birthDay, birthHour, birthMinute),
+      });
+    }
+  };
+
+  const birthDateSummary = `${birthYear}-${birthMonth}-${birthDay}`;
+  const birthTimeSummary = `${birthHour}:${birthMinute}`;
+  const hasBirthdate = form.birthdate.trim() !== '';
 
   const handleSave = async () => {
     if (isBusy) return;
@@ -282,105 +520,154 @@ const SettingsSheet: React.FC<Props> = ({
 
   const insets = useSafeAreaInsets();
 
+  if (!isRendered) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={isRendered} animationType="none" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
-        className="flex-1 justify-end bg-black/25 "
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <Pressable className="absolute inset-0" onPress={onClose} />
-
-        <View
-          className="gap-4 rounded-t-2xl bg-stone-100 px-4 pb-6 pt-3 bg-white"
-          style={{ paddingBottom: 24 + insets.bottom }}
-        >
-          <View className="flex-row items-center justify-between py-2">
-            <View className="flex-row items-center space-x-2">
-              <Text className="text-lg font-extrabold text-gray-900">설정</Text>
-              {isFetching && <ActivityIndicator size="small" color="#6b7280" />}
-            </View>
-            <Pressable
-              onPress={onClose}
-              hitSlop={12}
-              className="rounded-full p-2 active:opacity-70"
-            >
-              <Feather name="x" size={22} color="#6b7280" />
-            </Pressable>
-          </View>
-
-          <View className="gap-4">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              내 정보
-            </Text>
-            <View className="overflow-hidden rounded-xl border border-gray-200 bg-white ">
-              <Row label="닉네임">
-                <TextInput
-                  value={form.nickname}
-                  onChangeText={(text) => update({ nickname: text })}
-                  placeholder="입력해주세요"
-                  placeholderTextColor="#d1d5db"
-                  className="min-w-[120] text-right text-[15px] text-gray-900"
-                />
-              </Row>
-              <Row label="생년월일" divider>
-                <TextInput
-                  value={form.birthdate}
-                  onChangeText={(text) => update({ birthdate: text })}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#d1d5db"
-                  className="min-w-[120] text-right text-[15px] text-gray-900"
-                />
-              </Row>
-            </View>
-          </View>
-
-          <View className="gap-4">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              알림
-            </Text>
-            <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-              <Row label="알림 시간">
-                <Pressable
-                  onPress={openNotifyModal}
-                  disabled={isBusy}
-                  className={`flex-row items-center space-x-2 ${
-                    isBusy ? 'opacity-60' : 'active:opacity-70'
-                  }`}
-                >
-                  <Text className="text-[15px] font-semibold text-gray-900">
-                    {`${notifyHour}:${notifyMinute}`}
-                  </Text>
-                  <Feather name="chevron-down" size={16} color="#9ca3af" />
-                </Pressable>
-              </Row>
-            </View>
-          </View>
-
+        <View className="flex-1">
+          <Animated.View
+            pointerEvents="none"
+            className="absolute inset-0 bg-black/40"
+            style={{ opacity: overlayOpacity }}
+          />
           <Pressable
-            className={`rounded-xl py-3.5 active:opacity-90 ${
-              isBusy ? 'bg-gray-900/60' : 'bg-gray-900'
-            }`}
-            onPress={handleSave}
-            disabled={isBusy}
-          >
-            <View className="flex-row items-center justify-center space-x-2">
-              {isSaving && <ActivityIndicator size="small" color="#fff" />}
-              <Text className="text-center text-lg font-extrabold text-white">저장하기</Text>
-            </View>
-          </Pressable>
+            className="absolute inset-0"
+            onPress={onClose}
+            accessibilityLabel="설정 닫기"
+          />
 
-          <View className="gap-4">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              계정
-            </Text>
+          <Animated.View
+            className="absolute bottom-0 right-0 top-0 gap-6 rounded-l-2xl border-l border-gray-200 bg-white px-5"
+            style={[
+              {
+                width: panelWidth,
+                paddingTop: insets.top + 8,
+                paddingBottom: 24 + insets.bottom,
+                transform: [{ translateX: panelTranslateX }],
+                shadowColor: '#000',
+                shadowOpacity: 0.14,
+                shadowRadius: 18,
+                shadowOffset: { width: -6, height: 0 },
+                elevation: 12,
+              },
+            ]}
+          >
+            <View className="flex-row items-center justify-between py-3">
+              <View className="flex-row items-center space-x-2">
+                <Text className="text-xl font-extrabold text-gray-900">설정</Text>
+                {isFetching && <ActivityIndicator size="small" color="#6b7280" />}
+              </View>
+              <Pressable
+                onPress={onClose}
+                hitSlop={12}
+                className="rounded-full p-2 active:opacity-70"
+              >
+                <Feather name="x" size={22} color="#6b7280" />
+              </Pressable>
+            </View>
+
+            <View className="gap-5">
+              <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                내 정보
+              </Text>
+              <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <Row label="닉네임" divider>
+                  <TextInput
+                    value={form.nickname}
+                    onChangeText={(text) => update({ nickname: text })}
+                    placeholder="입력해주세요"
+                    placeholderTextColor="#d1d5db"
+                    className="min-w-[120] text-right text-base text-gray-600"
+                  />
+                </Row>
+                <Row label="생년월일" divider>
+                  <Pressable
+                    onPress={openBirthModal}
+                    disabled={isBusy}
+                    className={`flex-row items-center space-x-2 ${
+                      isBusy ? 'opacity-60' : 'active:opacity-70'
+                    }`}
+                  >
+                    <Text
+                      className={`text-base font-semibold ${
+                        hasBirthdate ? 'text-gray-600' : 'text-gray-400'
+                      }`}
+                    >
+                      {hasBirthdate ? birthDateSummary : 'YYYY-MM-DD'}
+                    </Text>
+                  </Pressable>
+                </Row>
+                <Row label="출생시간">
+                  <Pressable
+                    onPress={openBirthTimeModal}
+                    disabled={isBusy}
+                    className={`flex-row items-center space-x-2 ${
+                      isBusy ? 'opacity-60' : 'active:opacity-70'
+                    }`}
+                  >
+                    <Text
+                      className={`text-base font-semibold ${
+                        hasBirthdate ? 'text-gray-600' : 'text-gray-400'
+                      }`}
+                    >
+                      {hasBirthdate ? birthTimeSummary : 'HH:MM'}
+                    </Text>
+                  </Pressable>
+                </Row>
+              </View>
+            </View>
+
+            <View className="gap-5">
+              <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                알림
+              </Text>
+              <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <Row label="알림 시간">
+                  <Pressable
+                    onPress={openNotifyModal}
+                    disabled={isBusy}
+                    className={`flex-row items-center space-x-2 ${
+                      isBusy ? 'opacity-60' : 'active:opacity-70'
+                    }`}
+                  >
+                    <Text className="text-base font-semibold text-gray-600">
+                      {`${notifyHour}:${notifyMinute}`}
+                    </Text>
+                  </Pressable>
+                </Row>
+              </View>
+            </View>
+
             <Pressable
-              className="rounded-xl border border-rose-200 bg-rose-50 py-3.5 active:opacity-90"
-              onPress={handleLogout}
-              disabled={isLoading}
+              className={`rounded-xl py-4 active:opacity-90 ${
+                isBusy ? 'bg-gray-900/60' : 'bg-gray-900'
+              }`}
+              onPress={handleSave}
+              disabled={isBusy}
             >
-              <Text className="text-center text-base font-bold text-rose-600">로그아웃</Text>
+              <View className="flex-row items-center justify-center space-x-2">
+                {isSaving && <ActivityIndicator size="small" color="#fff" />}
+                <Text className="text-center text-xl font-extrabold text-white">저장하기</Text>
+              </View>
             </Pressable>
-          </View>
+
+            <View className="gap-5">
+              <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                계정
+              </Text>
+              <Pressable
+                className="rounded-xl border border-rose-200 bg-rose-50 py-4 active:opacity-90"
+                onPress={handleLogout}
+                disabled={isLoading}
+              >
+                <Text className="text-center text-lg font-bold text-rose-600">로그아웃</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
         </View>
 
         <PickerModal
@@ -388,18 +675,16 @@ const SettingsSheet: React.FC<Props> = ({
           title="알림 시간"
           onClose={() => setIsNotifyModalOpen(false)}
         >
-          <View className="mb-2 flex-row">
-            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">시</Text>
-            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">분</Text>
+          <View className="mb-3 flex-row">
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">시</Text>
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">분</Text>
           </View>
           <View className="flex-row items-center">
             <View className="flex-1 items-center">
               <WheelPicker
                 options={hourOptions}
                 value={notifyHour}
-                onChange={(nextHour) =>
-                  update({ notificationTime: `${nextHour}:${notifyMinute}` })
-                }
+                onChange={(nextHour) => update({ notificationTime: `${nextHour}:${notifyMinute}` })}
               />
             </View>
             <View className="flex-1 items-center">
@@ -408,6 +693,121 @@ const SettingsSheet: React.FC<Props> = ({
                 value={notifyMinute}
                 onChange={(nextMinute) =>
                   update({ notificationTime: `${notifyHour}:${nextMinute}` })
+                }
+              />
+            </View>
+          </View>
+        </PickerModal>
+
+        <PickerModal
+          visible={isBirthModalOpen}
+          title="생년월일"
+          onClose={() => setIsBirthModalOpen(false)}
+        >
+          <View className="mb-3 flex-row">
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">년</Text>
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">월</Text>
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">일</Text>
+          </View>
+          <View className="flex-row items-center">
+            <View className="flex-1 items-center">
+              <WheelPicker
+                options={birthYearOptions}
+                value={birthYear}
+                onChange={(nextYear) => {
+                  const nextDay = clampBirthDay(nextYear, birthMonth, birthDay);
+                  update({
+                    birthdate: buildBirthDateTime(
+                      nextYear,
+                      birthMonth,
+                      nextDay,
+                      birthHour,
+                      birthMinute,
+                    ),
+                  });
+                }}
+                itemTextClassName="text-base"
+              />
+            </View>
+            <View className="flex-1 items-center">
+              <WheelPicker
+                options={birthMonthOptions}
+                value={birthMonth}
+                onChange={(nextMonth) => {
+                  const nextDay = clampBirthDay(birthYear, nextMonth, birthDay);
+                  update({
+                    birthdate: buildBirthDateTime(
+                      birthYear,
+                      nextMonth,
+                      nextDay,
+                      birthHour,
+                      birthMinute,
+                    ),
+                  });
+                }}
+              />
+            </View>
+            <View className="flex-1 items-center">
+              <WheelPicker
+                options={birthDayOptions}
+                value={birthDay}
+                onChange={(nextDay) => {
+                  update({
+                    birthdate: buildBirthDateTime(
+                      birthYear,
+                      birthMonth,
+                      nextDay,
+                      birthHour,
+                      birthMinute,
+                    ),
+                  });
+                }}
+              />
+            </View>
+          </View>
+        </PickerModal>
+
+        <PickerModal
+          visible={isBirthTimeModalOpen}
+          title="출생시간"
+          onClose={() => setIsBirthTimeModalOpen(false)}
+        >
+          <View className="mb-3 flex-row">
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">시</Text>
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">분</Text>
+          </View>
+          <View className="flex-row items-center">
+            <View className="flex-1 items-center">
+              <WheelPicker
+                options={hourOptions}
+                value={birthHour}
+                onChange={(nextHour) =>
+                  update({
+                    birthdate: buildBirthDateTime(
+                      birthYear,
+                      birthMonth,
+                      birthDay,
+                      nextHour,
+                      birthMinute,
+                    ),
+                  })
+                }
+              />
+            </View>
+            <View className="flex-1 items-center">
+              <WheelPicker
+                options={birthMinuteOptions}
+                value={birthMinute}
+                onChange={(nextMinute) =>
+                  update({
+                    birthdate: buildBirthDateTime(
+                      birthYear,
+                      birthMonth,
+                      birthDay,
+                      birthHour,
+                      nextMinute,
+                    ),
+                  })
                 }
               />
             </View>
@@ -423,8 +823,8 @@ const Row: React.FC<{ label: string; children: React.ReactNode; divider?: boolea
   children,
   divider,
 }) => (
-  <View className={`flex-row items-center px-4 py-3 ${divider ? 'border-b border-gray-200' : ''}`}>
-    <Text className="text-[15px] font-semibold text-gray-900">{label}</Text>
+  <View className={`flex-row items-center px-5 py-4 ${divider ? 'border-b border-gray-200' : ''}`}>
+    <Text className="text-base font-semibold text-gray-900">{label}</Text>
     <View className="flex-1 items-end">{children}</View>
   </View>
 );

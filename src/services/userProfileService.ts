@@ -92,8 +92,9 @@ const mapGenderToApi = (gender: Gender | null | undefined) => {
 
 const toBirthDate = (birthDateTime?: string | null) => {
   if (!birthDateTime) return '';
-  const [datePart] = birthDateTime.split('T');
-  return datePart || birthDateTime;
+  const trimmed = birthDateTime.trim();
+  if (!trimmed) return '';
+  return trimmed.replace('T', ' ');
 };
 
 const toBirthDateTime = (birthdate: string) => {

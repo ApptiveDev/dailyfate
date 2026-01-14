@@ -3,7 +3,7 @@ export type Gender = 'male' | 'female' | 'other';
 export interface UserSettings {
   nickname: string;
   gender: Gender;
-  birthdate: string; // ISO date string
+  birthdate: string; // ISO date/time string
   notificationTime: string; // HH:mm (5-minute increments)
   notificationEnabled: boolean;
 }
