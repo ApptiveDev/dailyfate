@@ -33,7 +33,7 @@ interface Props {
   onUnauthorized: () => void;
 }
 
-const ITEM_HEIGHT = 36;
+const ITEM_HEIGHT = 40;
 const VISIBLE_ITEMS = 5;
 const DEFAULT_NOTIFICATION_TIME = '08:00';
 const NOTIFICATION_MINUTE_STEP = 5;
@@ -111,7 +111,11 @@ const parseBirthdateParts = (value: string, fallback: string, maxYear: number) =
   const yearNumber = Number(match[1]);
   const monthNumber = Number(match[2]);
   const dayNumber = Number(match[3]);
-  if (!Number.isFinite(yearNumber) || !Number.isFinite(monthNumber) || !Number.isFinite(dayNumber)) {
+  if (
+    !Number.isFinite(yearNumber) ||
+    !Number.isFinite(monthNumber) ||
+    !Number.isFinite(dayNumber)
+  ) {
     return toFallback();
   }
 
@@ -153,7 +157,7 @@ const WheelPicker: React.FC<{
   value: string;
   onChange: (value: string) => void;
   itemTextClassName?: string;
-}> = ({ options, value, onChange, itemTextClassName = 'text-base' }) => {
+}> = ({ options, value, onChange, itemTextClassName = 'text-lg' }) => {
   const scrollRef = useRef<ScrollView | null>(null);
   const padding = ((VISIBLE_ITEMS - 1) / 2) * ITEM_HEIGHT;
 
@@ -227,16 +231,16 @@ const PickerModal: React.FC<{
   <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
     <View className="flex-1 items-center justify-center bg-black/40 px-6">
       <Pressable className="absolute inset-0" onPress={onClose} />
-      <View className="w-full max-w-sm rounded-2xl bg-white p-5">
-        <View className="mb-4 flex-row items-center justify-between">
-          <Text className="text-lg font-extrabold text-gray-900">{title}</Text>
+      <View className="w-full max-w-sm rounded-2xl bg-white p-6">
+        <View className="mb-5 flex-row items-center justify-between">
+          <Text className="text-xl font-extrabold text-gray-900">{title}</Text>
           <Pressable onPress={onClose} hitSlop={10} className="rounded-full px-2 py-1">
-            <Text className="text-sm font-semibold text-gray-500">닫기</Text>
+            <Text className="text-base font-semibold text-gray-500">닫기</Text>
           </Pressable>
         </View>
         {children}
-        <Pressable className="mt-4 rounded-xl bg-gray-900 py-3" onPress={onClose}>
-          <Text className="text-center text-base font-bold text-white">완료</Text>
+        <Pressable className="mt-5 rounded-xl bg-gray-900 py-3.5" onPress={onClose}>
+          <Text className="text-center text-lg font-bold text-white">완료</Text>
         </Pressable>
       </View>
     </View>
@@ -285,13 +289,12 @@ const SettingsSheet: React.FC<Props> = ({
   const birthDatePart = rawBirthDatePart || DEFAULT_BIRTHDATE;
   const birthTimePart = rawBirthTimePart || DEFAULT_BIRTH_TIME;
 
-  const { year: birthYear, month: birthMonth, day: birthDay } = useMemo(
-    () =>
-      parseBirthdateParts(
-        birthDatePart,
-        DEFAULT_BIRTHDATE,
-        currentYear,
-      ),
+  const {
+    year: birthYear,
+    month: birthMonth,
+    day: birthDay,
+  } = useMemo(
+    () => parseBirthdateParts(birthDatePart, DEFAULT_BIRTHDATE, currentYear),
     [birthDatePart, currentYear],
   );
   const { hour: birthHour, minute: birthMinute } = useMemo(
@@ -310,9 +313,7 @@ const SettingsSheet: React.FC<Props> = ({
   );
   const birthYearOptions = useMemo(
     () =>
-      Array.from({ length: currentYear - MIN_BIRTH_YEAR + 1 }, (_, i) =>
-        String(currentYear - i),
-      ),
+      Array.from({ length: currentYear - MIN_BIRTH_YEAR + 1 }, (_, i) => String(currentYear - i)),
     [currentYear],
   );
   const birthMonthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => pad2(i + 1)), []);
@@ -376,13 +377,7 @@ const SettingsSheet: React.FC<Props> = ({
     if (normalizedDay !== birthDay) {
       setForm((prev) => ({
         ...prev,
-        birthdate: buildBirthDateTime(
-          birthYear,
-          birthMonth,
-          normalizedDay,
-          birthHour,
-          birthMinute,
-        ),
+        birthdate: buildBirthDateTime(birthYear, birthMonth, normalizedDay, birthHour, birthMinute),
       }));
     }
   }, [birthDay, birthMonth, birthYear, birthHour, birthMinute, form.birthdate]);
@@ -546,7 +541,7 @@ const SettingsSheet: React.FC<Props> = ({
           />
 
           <Animated.View
-            className="absolute bottom-0 right-0 top-0 gap-4 rounded-l-2xl border-l border-gray-200 bg-white px-4"
+            className="absolute bottom-0 right-0 top-0 gap-6 rounded-l-2xl border-l border-gray-200 bg-white px-5"
             style={[
               {
                 width: panelWidth,
@@ -561,9 +556,9 @@ const SettingsSheet: React.FC<Props> = ({
               },
             ]}
           >
-            <View className="flex-row items-center justify-between py-2">
+            <View className="flex-row items-center justify-between py-3">
               <View className="flex-row items-center space-x-2">
-                <Text className="text-lg font-extrabold text-gray-900">설정</Text>
+                <Text className="text-xl font-extrabold text-gray-900">설정</Text>
                 {isFetching && <ActivityIndicator size="small" color="#6b7280" />}
               </View>
               <Pressable
@@ -575,8 +570,8 @@ const SettingsSheet: React.FC<Props> = ({
               </Pressable>
             </View>
 
-            <View className="gap-4">
-              <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <View className="gap-5">
+              <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                 내 정보
               </Text>
               <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -586,7 +581,7 @@ const SettingsSheet: React.FC<Props> = ({
                     onChangeText={(text) => update({ nickname: text })}
                     placeholder="입력해주세요"
                     placeholderTextColor="#d1d5db"
-                    className="min-w-[120] text-right text-[15px] text-gray-900"
+                    className="min-w-[120] text-right text-base text-gray-900"
                   />
                 </Row>
                 <Row label="생년월일" divider>
@@ -598,13 +593,12 @@ const SettingsSheet: React.FC<Props> = ({
                     }`}
                   >
                     <Text
-                      className={`text-[15px] font-semibold ${
+                      className={`text-base font-semibold ${
                         hasBirthdate ? 'text-gray-900' : 'text-gray-400'
                       }`}
                     >
                       {hasBirthdate ? birthDateSummary : 'YYYY-MM-DD'}
                     </Text>
-                    <Feather name="chevron-down" size={16} color="#9ca3af" />
                   </Pressable>
                 </Row>
                 <Row label="출생시간">
@@ -616,20 +610,19 @@ const SettingsSheet: React.FC<Props> = ({
                     }`}
                   >
                     <Text
-                      className={`text-[15px] font-semibold ${
+                      className={`text-base font-semibold ${
                         hasBirthdate ? 'text-gray-900' : 'text-gray-400'
                       }`}
                     >
                       {hasBirthdate ? birthTimeSummary : 'HH:MM'}
                     </Text>
-                    <Feather name="chevron-down" size={16} color="#9ca3af" />
                   </Pressable>
                 </Row>
               </View>
             </View>
 
-            <View className="gap-4">
-              <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <View className="gap-5">
+              <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                 알림
               </Text>
               <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -641,17 +634,16 @@ const SettingsSheet: React.FC<Props> = ({
                       isBusy ? 'opacity-60' : 'active:opacity-70'
                     }`}
                   >
-                    <Text className="text-[15px] font-semibold text-gray-900">
+                    <Text className="text-base font-semibold text-gray-900">
                       {`${notifyHour}:${notifyMinute}`}
                     </Text>
-                    <Feather name="chevron-down" size={16} color="#9ca3af" />
                   </Pressable>
                 </Row>
               </View>
             </View>
 
             <Pressable
-              className={`rounded-xl py-3.5 active:opacity-90 ${
+              className={`rounded-xl py-4 active:opacity-90 ${
                 isBusy ? 'bg-gray-900/60' : 'bg-gray-900'
               }`}
               onPress={handleSave}
@@ -659,20 +651,20 @@ const SettingsSheet: React.FC<Props> = ({
             >
               <View className="flex-row items-center justify-center space-x-2">
                 {isSaving && <ActivityIndicator size="small" color="#fff" />}
-                <Text className="text-center text-lg font-extrabold text-white">저장하기</Text>
+                <Text className="text-center text-xl font-extrabold text-white">저장하기</Text>
               </View>
             </Pressable>
 
-            <View className="gap-4">
-              <Text className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <View className="gap-5">
+              <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                 계정
               </Text>
               <Pressable
-                className="rounded-xl border border-rose-200 bg-rose-50 py-3.5 active:opacity-90"
+                className="rounded-xl border border-rose-200 bg-rose-50 py-4 active:opacity-90"
                 onPress={handleLogout}
                 disabled={isLoading}
               >
-                <Text className="text-center text-base font-bold text-rose-600">로그아웃</Text>
+                <Text className="text-center text-lg font-bold text-rose-600">로그아웃</Text>
               </Pressable>
             </View>
           </Animated.View>
@@ -683,18 +675,16 @@ const SettingsSheet: React.FC<Props> = ({
           title="알림 시간"
           onClose={() => setIsNotifyModalOpen(false)}
         >
-          <View className="mb-2 flex-row">
-            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">시</Text>
-            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">분</Text>
+          <View className="mb-3 flex-row">
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">시</Text>
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">분</Text>
           </View>
           <View className="flex-row items-center">
             <View className="flex-1 items-center">
               <WheelPicker
                 options={hourOptions}
                 value={notifyHour}
-                onChange={(nextHour) =>
-                  update({ notificationTime: `${nextHour}:${notifyMinute}` })
-                }
+                onChange={(nextHour) => update({ notificationTime: `${nextHour}:${notifyMinute}` })}
               />
             </View>
             <View className="flex-1 items-center">
@@ -714,10 +704,10 @@ const SettingsSheet: React.FC<Props> = ({
           title="생년월일"
           onClose={() => setIsBirthModalOpen(false)}
         >
-          <View className="mb-2 flex-row">
-            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">년</Text>
-            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">월</Text>
-            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">일</Text>
+          <View className="mb-3 flex-row">
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">년</Text>
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">월</Text>
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">일</Text>
           </View>
           <View className="flex-row items-center">
             <View className="flex-1 items-center">
@@ -736,7 +726,7 @@ const SettingsSheet: React.FC<Props> = ({
                     ),
                   });
                 }}
-                itemTextClassName="text-sm"
+                itemTextClassName="text-base"
               />
             </View>
             <View className="flex-1 items-center">
@@ -782,9 +772,9 @@ const SettingsSheet: React.FC<Props> = ({
           title="출생시간"
           onClose={() => setIsBirthTimeModalOpen(false)}
         >
-          <View className="mb-2 flex-row">
-            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">시</Text>
-            <Text className="flex-1 text-center text-xs font-semibold text-gray-500">분</Text>
+          <View className="mb-3 flex-row">
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">시</Text>
+            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">분</Text>
           </View>
           <View className="flex-row items-center">
             <View className="flex-1 items-center">
@@ -833,8 +823,8 @@ const Row: React.FC<{ label: string; children: React.ReactNode; divider?: boolea
   children,
   divider,
 }) => (
-  <View className={`flex-row items-center px-4 py-3 ${divider ? 'border-b border-gray-200' : ''}`}>
-    <Text className="text-[15px] font-semibold text-gray-900">{label}</Text>
+  <View className={`flex-row items-center px-5 py-4 ${divider ? 'border-b border-gray-200' : ''}`}>
+    <Text className="text-base font-semibold text-gray-900">{label}</Text>
     <View className="flex-1 items-end">{children}</View>
   </View>
 );
