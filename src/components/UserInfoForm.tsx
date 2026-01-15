@@ -8,7 +8,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Gender, UserSettings } from '../types/fortune';
+import { Feather } from '@expo/vector-icons';
+import { UserSettings } from '../types/fortune';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Props {
@@ -17,48 +18,12 @@ interface Props {
   isSubmitting?: boolean;
 }
 
-const genderOptions: { val: Gender; label: string }[] = [
-  { val: 'male', label: '남성' },
-  { val: 'female', label: '여성' },
-];
-
 const ITEM_HEIGHT = 36;
 const VISIBLE_ITEMS = 5;
 const DEFAULT_NOTIFICATION_TIME = '08:00';
-const DEFAULT_BIRTH_TIME = '00:00';
 const NOTIFICATION_MINUTE_STEP = 5;
 
 const pad2 = (value: number) => String(value).padStart(2, '0');
-
-const splitDateTime = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) return { datePart: '', timePart: '' };
-  if (trimmed.includes('T')) {
-    const [datePart, timePart = ''] = trimmed.split('T');
-    return { datePart, timePart };
-  }
-  if (trimmed.includes(' ')) {
-    const [datePart, timePart = ''] = trimmed.split(' ');
-    return { datePart, timePart };
-  }
-  return { datePart: trimmed, timePart: '' };
-};
-
-const parseDateParts = (value: string) => {
-  const [yearRaw, monthRaw, dayRaw] = value.split('-');
-  const now = new Date();
-  const fallback = {
-    year: String(now.getFullYear()),
-    month: pad2(now.getMonth() + 1),
-    day: pad2(now.getDate()),
-  };
-  if (!yearRaw || !monthRaw || !dayRaw) return fallback;
-  const year = yearRaw.trim();
-  const month = pad2(Number(monthRaw));
-  const day = pad2(Number(dayRaw));
-  if (!Number(year) || !Number(month) || !Number(day)) return fallback;
-  return { year, month, day };
-};
 
 const parseTimeParts = (value: string, fallback: string) => {
   const [fallbackHour, fallbackMinute] = fallback.split(':');
@@ -85,33 +50,6 @@ const normalizeMinuteToStep = (minute: string, step: number) => {
   const normalized = Math.floor(numeric / step) * step;
   const bounded = Math.min(Math.max(normalized, 0), 59);
   return pad2(bounded);
-};
-
-const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
-
-const buildBirthdate = (year: string, month: string, day: string) => {
-  const yearNum = Number(year);
-  const monthNum = Number(month);
-  const dayNum = Number(day);
-  if (!yearNum || !monthNum || !dayNum) {
-    return `${year}-${month}-${day}`;
-  }
-  const maxDay = getDaysInMonth(yearNum, monthNum);
-  const safeDay = pad2(Math.min(Math.max(dayNum, 1), maxDay));
-  return `${yearNum}-${pad2(monthNum)}-${safeDay}`;
-};
-
-const buildBirthDateTime = (
-  year: string,
-  month: string,
-  day: string,
-  hour: string,
-  minute: string,
-) => {
-  const datePart = buildBirthdate(year, month, day);
-  const safeHour = pad2(Number(hour) || 0);
-  const safeMinute = pad2(Number(minute) || 0);
-  return `${datePart} ${safeHour}:${safeMinute}:00`;
 };
 
 const WheelPicker: React.FC<{
@@ -209,93 +147,18 @@ const PickerModal: React.FC<{
   </Modal>
 );
 
-const DatePickerModal: React.FC<{
-  visible: boolean;
-  title: string;
-  onClose: () => void;
-  year: string;
-  month: string;
-  day: string;
-  yearOptions: string[];
-  monthOptions: string[];
-  dayOptions: string[];
-  onChangeYear: (value: string) => void;
-  onChangeMonth: (value: string) => void;
-  onChangeDay: (value: string) => void;
-}> = ({
-  visible,
-  title,
-  onClose,
-  year,
-  month,
-  day,
-  yearOptions,
-  monthOptions,
-  dayOptions,
-  onChangeYear,
-  onChangeMonth,
-  onChangeDay,
-}) => (
-  <PickerModal visible={visible} title={title} onClose={onClose}>
-    <View className="mb-2 flex-row">
-      <Text className="flex-1 text-center text-xs font-semibold text-gray-500">년</Text>
-      <Text className="flex-1 text-center text-xs font-semibold text-gray-500">월</Text>
-      <Text className="flex-1 text-center text-xs font-semibold text-gray-500">일</Text>
-    </View>
-    <View className="flex-row items-center">
-      <View className="flex-1 items-center">
-        <WheelPicker
-          options={yearOptions}
-          value={year}
-          onChange={onChangeYear}
-          itemTextClassName="text-xl"
-        />
-      </View>
-      <View className="flex-1 items-center">
-        <WheelPicker
-          options={monthOptions}
-          value={month}
-          onChange={onChangeMonth}
-          itemTextClassName="text-xl"
-        />
-      </View>
-      <View className="flex-1 items-center">
-        <WheelPicker
-          options={dayOptions}
-          value={day}
-          onChange={onChangeDay}
-          itemTextClassName="text-xl"
-        />
-      </View>
-    </View>
-  </PickerModal>
-);
-
 const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting = false }) => {
   const [form, setForm] = useState<UserSettings>(
     initialValues || {
       nickname: '',
-      gender: 'male',
+      gender: 'other',
       birthdate: '',
       notificationTime: DEFAULT_NOTIFICATION_TIME,
       notificationEnabled: true,
     },
   );
-  const [isBirthDateModalOpen, setIsBirthDateModalOpen] = useState(false);
-  const [isBirthTimeModalOpen, setIsBirthTimeModalOpen] = useState(false);
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
 
-  const defaultBirthdate = useMemo(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
-  }, []);
-  const { datePart, timePart } = useMemo(() => splitDateTime(form.birthdate), [form.birthdate]);
-  const birthDatePart = datePart || defaultBirthdate;
-  const { year, month, day } = useMemo(() => parseDateParts(birthDatePart), [birthDatePart]);
-  const { hour: birthHour, minute: birthMinute } = useMemo(
-    () => parseTimeParts(timePart || DEFAULT_BIRTH_TIME, DEFAULT_BIRTH_TIME),
-    [timePart],
-  );
   const { hour: notifyHour, minute: notifyMinute } = useMemo(() => {
     const parsed = parseTimeParts(
       form.notificationTime || DEFAULT_NOTIFICATION_TIME,
@@ -307,23 +170,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
     };
   }, [form.notificationTime]);
 
-  const yearOptions = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const years: string[] = [];
-    for (let y = currentYear; y >= 1900; y -= 1) {
-      years.push(String(y));
-    }
-    return years;
-  }, []);
-  const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => pad2(i + 1)), []);
-  const dayOptions = useMemo(() => {
-    const yearNum = Number(year) || new Date().getFullYear();
-    const monthNum = Number(month) || 1;
-    const totalDays = getDaysInMonth(yearNum, monthNum);
-    return Array.from({ length: totalDays }, (_, i) => pad2(i + 1));
-  }, [month, year]);
   const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => pad2(i)), []);
-  const birthMinuteOptions = useMemo(() => Array.from({ length: 60 }, (_, i) => pad2(i)), []);
   const notifyMinuteOptions = useMemo(
     () =>
       Array.from({ length: 60 / NOTIFICATION_MINUTE_STEP }, (_, i) =>
@@ -332,25 +179,12 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
     [],
   );
 
-  const isValid = useMemo(() => form.nickname.trim() !== '' && form.birthdate !== '', [form]);
+  const isValid = useMemo(() => form.nickname.trim() !== '', [form.nickname]);
 
   const update = useCallback(
     (patch: Partial<UserSettings>) => setForm((prev) => ({ ...prev, ...patch })),
     [],
   );
-
-  useEffect(() => {
-    if (!form.birthdate) return;
-    if (!dayOptions.includes(day)) {
-      const nextDay = dayOptions[dayOptions.length - 1] ?? '01';
-      update({ birthdate: buildBirthDateTime(year, month, nextDay, birthHour, birthMinute) });
-    }
-  }, [birthHour, birthMinute, dayOptions, day, form.birthdate, month, update, year]);
-
-  useEffect(() => {
-    if (form.birthdate.trim()) return;
-    update({ birthdate: buildBirthDateTime(year, month, day, birthHour, birthMinute) });
-  }, [birthHour, birthMinute, day, form.birthdate, month, update, year]);
 
   useEffect(() => {
     if (!form.notificationTime.trim()) return;
@@ -360,32 +194,10 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
     }
   }, [form.notificationTime, notifyHour, notifyMinute, update]);
 
-  const birthSummary = buildBirthdate(year, month, day);
-  const birthTimeSummary = `${birthHour}:${birthMinute}`;
   const notificationSummary = `${notifyHour}:${notifyMinute}`;
-
-  const openBirthDateModal = useCallback(() => {
-    setIsBirthDateModalOpen(true);
-    setIsBirthTimeModalOpen(false);
-    setIsNotifyModalOpen(false);
-    if (!form.birthdate.trim()) {
-      update({ birthdate: buildBirthDateTime(year, month, day, birthHour, birthMinute) });
-    }
-  }, [birthHour, birthMinute, form.birthdate, month, update, year, day]);
-
-  const openBirthTimeModal = useCallback(() => {
-    setIsBirthTimeModalOpen(true);
-    setIsBirthDateModalOpen(false);
-    setIsNotifyModalOpen(false);
-    if (!form.birthdate.trim()) {
-      update({ birthdate: buildBirthDateTime(year, month, day, birthHour, birthMinute) });
-    }
-  }, [birthHour, birthMinute, form.birthdate, month, update, year, day]);
 
   const openNotifyModal = useCallback(() => {
     setIsNotifyModalOpen(true);
-    setIsBirthDateModalOpen(false);
-    setIsBirthTimeModalOpen(false);
     const normalizedTime = `${notifyHour}:${notifyMinute}`;
     if (form.notificationTime.trim() !== normalizedTime) {
       update({ notificationTime: normalizedTime });
@@ -398,88 +210,83 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
   };
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-white">
+    <SafeAreaView edges={['top']} className="flex-1 bg-[#FFFBF5]">
       <ScrollView
-        className="flex-1 bg-white"
-        contentContainerStyle={{ padding: 48, paddingBottom: 72 }}
+        className="flex-1"
+        contentContainerStyle={{ padding: 32, paddingBottom: 72 }}
         keyboardShouldPersistTaps="handled"
       >
         <View className="gap-8">
+          {/* 헤더 */}
           <View className="gap-4">
-            <Text className="text-3xl font-extrabold text-gray-900 ">
-              반가워요!{'\n'}정보를 입력해주세요
+            <View className="mb-2 h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100">
+              <Feather name="camera" size={28} color="#10b981" />
+            </View>
+            <Text className="text-3xl font-extrabold text-stone-800">
+              반가워요!{'\n'}프로필을 설정해주세요
             </Text>
-            <Text className="text-lg text-gray-500">정확한 운세 분석을 위해 필요해요.</Text>
+            <Text className="text-lg text-stone-500">
+              사진 미션 알림을 받을 닉네임과 시간을 설정해요.
+            </Text>
           </View>
 
-          <View className="gap-4">
-            <Text className="text-xl font-bold text-gray-700">닉네임</Text>
+          {/* 닉네임 */}
+          <View className="gap-3">
+            <Text className="text-lg font-bold text-stone-700">닉네임</Text>
             <TextInput
               value={form.nickname}
               onChangeText={(text) => update({ nickname: text })}
-              placeholder="홍길동"
-              placeholderTextColor="#9ca3af"
-              className="rounded-xl bg-gray-100 px-4 py-5 text-xl text-gray-900"
+              placeholder="사진작가"
+              placeholderTextColor="#a8a29e"
+              className="rounded-xl bg-white px-4 py-5 text-xl text-stone-800 shadow-sm"
+              style={{
+                shadowColor: '#000',
+                shadowOpacity: 0.05,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 2 },
+              }}
             />
           </View>
 
-          <View className="gap-4">
-            <Text className="text-xl font-bold text-gray-700">성별</Text>
-            <View className="flex-row gap-4">
-              {genderOptions.map((opt) => {
-                const active = form.gender === opt.val;
-                return (
-                  <Pressable
-                    key={opt.val}
-                    className={`flex-1 items-center rounded-xl p-4 ${
-                      active ? 'bg-gray-900' : 'bg-gray-100'
-                    }`}
-                    onPress={() => update({ gender: opt.val })}
-                  >
-                    <Text
-                      className={`text-lg font-bold ${active ? 'text-white' : 'text-gray-500'}`}
-                    >
-                      {opt.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          <View className="gap-4">
-            <Text className="text-xl font-bold text-gray-700">생년월일</Text>
-            <Pressable className="rounded-xl bg-gray-100 px-4 py-4" onPress={openBirthDateModal}>
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-semibold text-gray-900">{birthSummary}</Text>
-                <Text className="text-sm font-semibold text-gray-500">선택</Text>
+          {/* 알림 시간 */}
+          <View className="gap-3">
+            <Text className="text-lg font-bold text-stone-700">매일 미션 알림</Text>
+            <Pressable
+              className="flex-row items-center justify-between rounded-xl bg-white px-4 py-4 shadow-sm"
+              style={{
+                shadowColor: '#000',
+                shadowOpacity: 0.05,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 2 },
+              }}
+              onPress={openNotifyModal}
+            >
+              <View className="flex-row items-center">
+                <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                  <Feather name="bell" size={18} color="#f59e0b" />
+                </View>
+                <View>
+                  <Text className="text-lg font-semibold text-stone-800">{notificationSummary}</Text>
+                  <Text className="text-sm text-stone-400">매일 이 시간에 알림을 보내드려요</Text>
+                </View>
               </View>
+              <Feather name="chevron-right" size={20} color="#a8a29e" />
             </Pressable>
           </View>
 
-          <View className="gap-4">
-            <Text className="text-xl font-bold text-gray-700">태어난 시간</Text>
-            <Pressable className="rounded-xl bg-gray-100 px-4 py-4" onPress={openBirthTimeModal}>
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-semibold text-gray-900">{birthTimeSummary}</Text>
-                <Text className="text-sm font-semibold text-gray-500">선택</Text>
-              </View>
-            </Pressable>
+          {/* 안내 */}
+          <View className="flex-row items-start rounded-xl bg-stone-100 p-4">
+            <Feather name="info" size={16} color="#78716c" style={{ marginTop: 2 }} />
+            <Text className="ml-3 flex-1 text-sm leading-5 text-stone-500">
+              매일 새로운 사진 주제가 주어져요.{'\n'}
+              알림 시간에 오늘의 미션을 확인해보세요!
+            </Text>
           </View>
 
-          <View className="gap-4">
-            <Text className="text-xl font-bold text-gray-700">매일 알림</Text>
-            <Pressable className="rounded-xl bg-gray-100 px-4 py-4" onPress={openNotifyModal}>
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-semibold text-gray-900">{notificationSummary}</Text>
-                <Text className="text-sm font-semibold text-gray-500">선택</Text>
-              </View>
-            </Pressable>
-          </View>
-
+          {/* 시작 버튼 */}
           <Pressable
-            className={`mt-2 rounded-xl py-3.5 ${
-              isValid && !isSubmitting ? 'bg-gray-900' : 'bg-gray-900/40'
+            className={`mt-4 flex-row items-center justify-center rounded-xl py-4 ${
+              isValid && !isSubmitting ? 'bg-stone-800' : 'bg-stone-800/40'
             }`}
             disabled={!isValid || isSubmitting}
             onPress={handleSubmit}
@@ -487,72 +294,14 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
             {isSubmitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text className="text-center text-lg font-extrabold text-white">시작하기</Text>
+              <>
+                <Text className="text-center text-lg font-extrabold text-white">시작하기</Text>
+                <Feather name="arrow-right" size={20} color="#ffffff" style={{ marginLeft: 8 }} />
+              </>
             )}
           </Pressable>
 
-          <DatePickerModal
-            visible={isBirthDateModalOpen}
-            title="생년월일"
-            onClose={() => setIsBirthDateModalOpen(false)}
-            year={year}
-            month={month}
-            day={day}
-            yearOptions={yearOptions}
-            monthOptions={monthOptions}
-            dayOptions={dayOptions}
-            onChangeYear={(nextYear) =>
-              update({
-                birthdate: buildBirthDateTime(nextYear, month, day, birthHour, birthMinute),
-              })
-            }
-            onChangeMonth={(nextMonth) =>
-              update({
-                birthdate: buildBirthDateTime(year, nextMonth, day, birthHour, birthMinute),
-              })
-            }
-            onChangeDay={(nextDay) =>
-              update({
-                birthdate: buildBirthDateTime(year, month, nextDay, birthHour, birthMinute),
-              })
-            }
-          />
-
-          <PickerModal
-            visible={isBirthTimeModalOpen}
-            title="태어난 시간"
-            onClose={() => setIsBirthTimeModalOpen(false)}
-          >
-            <View className="mb-2 flex-row">
-              <Text className="flex-1 text-center text-xs font-semibold text-gray-500">시</Text>
-              <Text className="flex-1 text-center text-xs font-semibold text-gray-500">분</Text>
-            </View>
-            <View className="flex-row items-center">
-              <View className="flex-1 items-center">
-                <WheelPicker
-                  options={hourOptions}
-                  value={birthHour}
-                  onChange={(nextHour) =>
-                    update({
-                      birthdate: buildBirthDateTime(year, month, day, nextHour, birthMinute),
-                    })
-                  }
-                />
-              </View>
-              <View className="flex-1 items-center">
-                <WheelPicker
-                  options={birthMinuteOptions}
-                  value={birthMinute}
-                  onChange={(nextMinute) =>
-                    update({
-                      birthdate: buildBirthDateTime(year, month, day, birthHour, nextMinute),
-                    })
-                  }
-                />
-              </View>
-            </View>
-          </PickerModal>
-
+          {/* 알림 시간 선택 모달 */}
           <PickerModal
             visible={isNotifyModalOpen}
             title="알림 시간"

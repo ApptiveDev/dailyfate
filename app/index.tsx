@@ -1,16 +1,20 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Platform, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useNavigation } from 'expo-router';
 
-import { useFortune } from '@/hooks/useFortune';
-import { UserSettings } from '@/types';
+import { MissionData, MonthlyStats, PhotoEntry, UserSettings } from '@/types';
 import Onboarding from '@/components/Onboarding';
 import UserInfoForm from '@/components/UserInfoForm';
-import CalendarPage from '@/components/CalendarPage';
+import TodayMissionPage from '@/components/TodayMissionPage';
+import MonthlyAlbumPage from '@/components/MonthlyAlbumPage';
+import CameraPage from '@/components/CameraPage';
+import PhotoPreviewPage from '@/components/PhotoPreviewPage';
+import PhotoDetailPage from '@/components/PhotoDetailPage';
 import SettingsSheet from '@/components/SettingsSheet';
 import LoginScreen from '@/components/LoginScreen';
+import BottomTabBar, { TabType } from '@/components/BottomTabBar';
 import { useAuth } from '@/providers/AuthProvider';
 import { registerForPushNotificationsAsync } from '@/services/pushNotifications';
 import { updatePushToken } from '@/services/pushTokenService';
@@ -25,11 +29,83 @@ const USER_SETTINGS_KEY = 'userSettings';
 const HAS_LOGGED_IN_KEY = 'hasLoggedIn';
 type LoginMode = 'signIn' | 'signUp';
 
+// ===== 더미 데이터 =====
+const DUMMY_MISSIONS: Record<string, MissionData> = {
+  '2026-01-16': {
+    id: '1',
+    date: '2026-01-16',
+    theme: '따뜻한 조명',
+    seasonTag: '겨울',
+    hint: '카페, 집, 거리의 따뜻한 불빛을 찾아보세요',
+  },
+  '2026-01-15': {
+    id: '2',
+    date: '2026-01-15',
+    theme: '하얀 색',
+    seasonTag: '겨울',
+    hint: '겨울의 흰색을 담아보세요',
+  },
+  '2026-01-14': {
+    id: '3',
+    date: '2026-01-14',
+    theme: '입김',
+    seasonTag: '소한',
+    hint: '추운 날씨에 보이는 입김을 촬영해보세요',
+  },
+};
+
+const DUMMY_PHOTOS: PhotoEntry[] = [
+  {
+    id: '1',
+    missionId: '2',
+    date: '2026-01-15',
+    photoUri: 'dummy://photo1.jpg',
+    caption: '눈 내린 아침',
+    createdAt: '2026-01-15T09:30:00',
+  },
+  {
+    id: '2',
+    missionId: '3',
+    date: '2026-01-14',
+    photoUri: 'dummy://photo2.jpg',
+    caption: '',
+    createdAt: '2026-01-14T08:15:00',
+  },
+];
+
+const getDummyStats = (year: number, month: number): MonthlyStats => {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
+  const totalDays = isCurrentMonth ? today.getDate() : daysInMonth;
+  const completedDays = DUMMY_PHOTOS.filter((p) => {
+    const d = new Date(p.date);
+    return d.getFullYear() === year && d.getMonth() + 1 === month;
+  }).length;
+
+  return {
+    year,
+    month,
+    totalDays,
+    completedDays,
+    streak: 2,
+    longestStreak: 5,
+  };
+};
+
+const formatDateKey = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+// ===== 더미 데이터 끝 =====
+
 export default function Home() {
   const navigation = useNavigation();
 
+  // 기존 상태
   const [bootLoading, setBootLoading] = useState(true);
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [hasLoggedIn, setHasLoggedIn] = useState(false);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
@@ -41,23 +117,37 @@ export default function Home() {
   const [pushToken, setPushToken] = useState<string | null>(null);
   const [loginMode, setLoginMode] = useState<LoginMode>('signIn');
 
+  // 새로운 상태 (사진 미션 앱)
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [activeTab, setActiveTab] = useState<TabType>('today');
+  const [albumYear, setAlbumYear] = useState(new Date().getFullYear());
+  const [albumMonth, setAlbumMonth] = useState(new Date().getMonth() + 1);
+
+  // 모달 상태
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [capturedPhotoUri, setCapturedPhotoUri] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<PhotoEntry | null>(null);
+
   const { isBootstrapping: authBootstrapping, isSignedIn, signOut } = useAuth();
 
   const shouldShowLogin = forceLogin || (!isSignedIn && !hasLoggedIn);
 
-  const canLoadFortune =
-    hasOnboarded &&
-    !shouldShowLogin &&
-    (isSignedIn || hasLoggedIn) &&
-    !!userSettings &&
-    !needsProfileSetup &&
-    !profileLoading;
-
-  const {
-    fortune,
-    loading: loadingFortune,
-    error,
-  } = useFortune(currentDate, canLoadFortune);
+  // 더미 데이터 기반 값들
+  const dateKey = formatDateKey(currentDate);
+  const todayMission = DUMMY_MISSIONS[dateKey] || {
+    id: 'default',
+    date: dateKey,
+    theme: '오늘의 순간',
+    hint: '일상에서 특별한 순간을 찾아보세요',
+  };
+  const todayPhoto = DUMMY_PHOTOS.find((p) => p.date === dateKey) || null;
+  const monthlyStats = getDummyStats(albumYear, albumMonth);
+  const monthlyPhotos = DUMMY_PHOTOS.filter((p) => {
+    const d = new Date(p.date);
+    return d.getFullYear() === albumYear && d.getMonth() + 1 === albumMonth;
+  });
 
   // Load persisted state
   useEffect(() => {
@@ -178,7 +268,6 @@ export default function Home() {
     };
   }, [isSignedIn, requireLogin]);
 
-  // Header: show only when main screen is active
   useLayoutEffect(() => {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
@@ -238,35 +327,106 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    if (!error) return;
-    if (error.status === 401) {
-      requireLogin();
-      Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
-      return;
+  // ===== 사진 미션 앱 핸들러 =====
+  const handleOpenCamera = () => {
+    setIsCameraOpen(true);
+  };
+
+  const handleCloseCamera = () => {
+    setIsCameraOpen(false);
+  };
+
+  const handleCapture = () => {
+    // 더미: 촬영된 것처럼 처리
+    setCapturedPhotoUri('dummy://captured.jpg');
+    setIsCameraOpen(false);
+    setIsPreviewOpen(true);
+  };
+
+  const handleOpenGallery = () => {
+    // 더미: 갤러리에서 선택된 것처럼 처리
+    setCapturedPhotoUri('dummy://gallery.jpg');
+    setIsPreviewOpen(true);
+  };
+
+  const handleSavePhoto = (caption: string) => {
+    // 더미: 저장된 것처럼 처리
+    console.log('Photo saved with caption:', caption);
+    setIsPreviewOpen(false);
+    setCapturedPhotoUri(null);
+    Alert.alert('저장 완료', '사진이 저장되었습니다!');
+  };
+
+  const handleRetake = () => {
+    setIsPreviewOpen(false);
+    setCapturedPhotoUri(null);
+    setIsCameraOpen(true);
+  };
+
+  const handleViewTodayPhoto = () => {
+    if (todayPhoto) {
+      setSelectedPhoto(todayPhoto);
+      setIsDetailOpen(true);
     }
-    Alert.alert('운세를 불러오지 못했어요', error.message);
-  }, [error, requireLogin]);
+  };
 
-  const handleNextDay = useCallback(() => {
-    setCurrentDate((prev) => {
-      const next = new Date(prev);
-      next.setDate(prev.getDate() + 1);
-      return next;
-    });
-  }, []);
+  const handleSelectPhoto = (photo: PhotoEntry) => {
+    setSelectedPhoto(photo);
+    setIsDetailOpen(true);
+  };
 
-  const handlePrevDay = useCallback(() => {
-    setCurrentDate((prev) => {
-      const prevDate = new Date(prev);
-      prevDate.setDate(prev.getDate() - 1);
-      return prevDate;
-    });
-  }, []);
+  const handleSelectEmptyDay = (date: Date) => {
+    setCurrentDate(date);
+    setActiveTab('today');
+  };
 
+  const handlePrevMonth = () => {
+    if (albumMonth === 1) {
+      setAlbumYear(albumYear - 1);
+      setAlbumMonth(12);
+    } else {
+      setAlbumMonth(albumMonth - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    const now = new Date();
+    const canGoNext =
+      albumYear < now.getFullYear() ||
+      (albumYear === now.getFullYear() && albumMonth < now.getMonth() + 1);
+
+    if (canGoNext) {
+      if (albumMonth === 12) {
+        setAlbumYear(albumYear + 1);
+        setAlbumMonth(1);
+      } else {
+        setAlbumMonth(albumMonth + 1);
+      }
+    }
+  };
+
+  const handleDeletePhoto = () => {
+    Alert.alert('삭제', '정말 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => {
+          setIsDetailOpen(false);
+          setSelectedPhoto(null);
+        },
+      },
+    ]);
+  };
+
+  const handleSharePhoto = () => {
+    Alert.alert('공유', '공유 기능은 아직 구현되지 않았습니다.');
+  };
+
+  // ===== 렌더링 =====
   if (bootLoading || authBootstrapping || (profileLoading && !forceLogin)) {
     return (
-      <View className="flex-1 items-center justify-center bg-stone-200">
+      <View className="flex-1 items-center justify-center bg-[#FFFBF5]">
         <ActivityIndicator size="large" color="#191F28" />
       </View>
     );
@@ -288,31 +448,58 @@ export default function Home() {
 
   const showUserForm = needsProfileSetup;
 
+  if (showUserForm) {
+    return (
+      <UserInfoForm
+        initialValues={userSettings || undefined}
+        onSubmit={handleUserInfoSubmit}
+        isSubmitting={profileSaving}
+      />
+    );
+  }
+
+  // 메인 화면
   return (
-    <View className="flex-1 bg-white">
-      {showUserForm ? (
-        <UserInfoForm
-          initialValues={userSettings || undefined}
-          onSubmit={handleUserInfoSubmit}
-          isSubmitting={profileSaving}
-        />
-      ) : (
-        <CalendarPage
+    <View className="flex-1 bg-[#FFFBF5]">
+      {/* 탭 콘텐츠 */}
+      {activeTab === 'today' && (
+        <TodayMissionPage
           date={currentDate}
-          onNext={handleNextDay}
-          onPrev={handlePrevDay}
-          fortune={fortune}
-          loading={loadingFortune}
-          onOpenSettings={() => {
-            if (userSettings) {
-              setIsSettingsOpen(true);
-            } else {
-              setNeedsProfileSetup(true);
-            }
-          }}
+          mission={todayMission}
+          todayPhoto={todayPhoto}
+          stats={monthlyStats}
+          loading={false}
+          onOpenCamera={handleOpenCamera}
+          onOpenGallery={handleOpenGallery}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onViewPhoto={handleViewTodayPhoto}
         />
       )}
 
+      {activeTab === 'album' && (
+        <MonthlyAlbumPage
+          year={albumYear}
+          month={albumMonth}
+          photos={monthlyPhotos}
+          stats={monthlyStats}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
+          onSelectPhoto={handleSelectPhoto}
+          onSelectEmptyDay={handleSelectEmptyDay}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
+      )}
+
+      {activeTab === 'profile' && (
+        <View className="flex-1 items-center justify-center">
+          {/* 프로필/내 기록 탭 - 추후 구현 */}
+        </View>
+      )}
+
+      {/* 하단 탭바 */}
+      <BottomTabBar activeTab={activeTab} onTabPress={setActiveTab} />
+
+      {/* 설정 시트 */}
       {userSettings && (
         <SettingsSheet
           visible={isSettingsOpen}
@@ -326,6 +513,51 @@ export default function Home() {
           onUnauthorized={requireLogin}
         />
       )}
+
+      {/* 카메라 모달 */}
+      <Modal visible={isCameraOpen} animationType="slide">
+        <CameraPage
+          mission={todayMission}
+          onCapture={handleCapture}
+          onClose={handleCloseCamera}
+          onFlipCamera={() => {}}
+          onOpenGallery={() => {
+            setIsCameraOpen(false);
+            handleOpenGallery();
+          }}
+        />
+      </Modal>
+
+      {/* 미리보기 모달 */}
+      <Modal visible={isPreviewOpen} animationType="slide">
+        <PhotoPreviewPage
+          photoUri={capturedPhotoUri || ''}
+          mission={todayMission}
+          date={currentDate}
+          onSave={handleSavePhoto}
+          onRetake={handleRetake}
+          onClose={() => {
+            setIsPreviewOpen(false);
+            setCapturedPhotoUri(null);
+          }}
+        />
+      </Modal>
+
+      {/* 사진 상세 모달 */}
+      <Modal visible={isDetailOpen} animationType="slide">
+        {selectedPhoto && (
+          <PhotoDetailPage
+            photo={selectedPhoto}
+            mission={DUMMY_MISSIONS[selectedPhoto.date] || null}
+            onClose={() => {
+              setIsDetailOpen(false);
+              setSelectedPhoto(null);
+            }}
+            onDelete={handleDeletePhoto}
+            onShare={handleSharePhoto}
+          />
+        )}
+      </Modal>
     </View>
   );
 }

@@ -37,25 +37,8 @@ const ITEM_HEIGHT = 40;
 const VISIBLE_ITEMS = 5;
 const DEFAULT_NOTIFICATION_TIME = '08:00';
 const NOTIFICATION_MINUTE_STEP = 5;
-const DEFAULT_BIRTHDATE = '1990-01-01';
-const DEFAULT_BIRTH_TIME = '00:00';
-const MIN_BIRTH_YEAR = 1900;
 
 const pad2 = (value: number) => String(value).padStart(2, '0');
-
-const splitDateTime = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) return { datePart: '', timePart: '' };
-  if (trimmed.includes('T')) {
-    const [datePart, timePart = ''] = trimmed.split('T');
-    return { datePart, timePart };
-  }
-  if (trimmed.includes(' ')) {
-    const [datePart, timePart = ''] = trimmed.split(' ');
-    return { datePart, timePart };
-  }
-  return { datePart: trimmed, timePart: '' };
-};
 
 const parseTimeParts = (value: string, fallback: string) => {
   const [fallbackHour, fallbackMinute] = fallback.split(':');
@@ -82,74 +65,6 @@ const normalizeMinuteToStep = (minute: string, step: number) => {
   const normalized = Math.floor(numeric / step) * step;
   const bounded = Math.min(Math.max(normalized, 0), 59);
   return pad2(bounded);
-};
-
-const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
-
-const parseBirthdateParts = (value: string, fallback: string, maxYear: number) => {
-  const fallbackMatch = fallback.match(/(\d{4})-(\d{2})-(\d{2})/);
-  const fallbackYearNumber = fallbackMatch ? Number(fallbackMatch[1]) : MIN_BIRTH_YEAR;
-  const fallbackMonthNumber = fallbackMatch ? Number(fallbackMatch[2]) : 1;
-  const fallbackDayNumber = fallbackMatch ? Number(fallbackMatch[3]) : 1;
-
-  const fallbackYear = Math.min(Math.max(fallbackYearNumber, MIN_BIRTH_YEAR), maxYear);
-  const fallbackMonth = Math.min(Math.max(fallbackMonthNumber, 1), 12);
-  const fallbackDay = Math.min(
-    Math.max(fallbackDayNumber, 1),
-    getDaysInMonth(fallbackYear, fallbackMonth),
-  );
-
-  const toFallback = () => ({
-    year: String(fallbackYear),
-    month: pad2(fallbackMonth),
-    day: pad2(fallbackDay),
-  });
-
-  const match = value.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if (!match) return toFallback();
-
-  const yearNumber = Number(match[1]);
-  const monthNumber = Number(match[2]);
-  const dayNumber = Number(match[3]);
-  if (
-    !Number.isFinite(yearNumber) ||
-    !Number.isFinite(monthNumber) ||
-    !Number.isFinite(dayNumber)
-  ) {
-    return toFallback();
-  }
-
-  const year = Math.min(Math.max(yearNumber, MIN_BIRTH_YEAR), maxYear);
-  const month = Math.min(Math.max(monthNumber, 1), 12);
-  const day = Math.min(Math.max(dayNumber, 1), getDaysInMonth(year, month));
-
-  return {
-    year: String(year),
-    month: pad2(month),
-    day: pad2(day),
-  };
-};
-
-const clampBirthDay = (year: string, month: string, day: string) => {
-  const maxDay = getDaysInMonth(Number(year), Number(month));
-  const dayNumber = Number(day);
-  if (!Number.isFinite(dayNumber)) return pad2(1);
-  return pad2(Math.min(Math.max(dayNumber, 1), maxDay));
-};
-
-const buildBirthDateTime = (
-  year: string,
-  month: string,
-  day: string,
-  hour: string,
-  minute: string,
-) => {
-  const yearNumber = Number(year) || MIN_BIRTH_YEAR;
-  const monthNumber = Number(month) || 1;
-  const safeDay = clampBirthDay(String(yearNumber), pad2(monthNumber), day);
-  const safeHour = pad2(Number(hour) || 0);
-  const safeMinute = pad2(Number(minute) || 0);
-  return `${yearNumber}-${pad2(monthNumber)}-${safeDay} ${safeHour}:${safeMinute}:00`;
 };
 
 const WheelPicker: React.FC<{
@@ -259,11 +174,8 @@ const SettingsSheet: React.FC<Props> = ({
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
-  const [isBirthModalOpen, setIsBirthModalOpen] = useState(false);
-  const [isBirthTimeModalOpen, setIsBirthTimeModalOpen] = useState(false);
   const { isLoading } = useAuth();
   const isBusy = isFetching || isSaving;
-  const currentYear = useMemo(() => new Date().getFullYear(), []);
   const { width: windowWidth } = useWindowDimensions();
   const panelWidth = Math.min(windowWidth * 0.88, 420);
   const panelTranslateX = useRef(new Animated.Value(panelWidth)).current;
@@ -282,28 +194,7 @@ const SettingsSheet: React.FC<Props> = ({
     };
   }, [form.notificationTime]);
 
-  const { datePart: rawBirthDatePart, timePart: rawBirthTimePart } = useMemo(
-    () => splitDateTime(form.birthdate),
-    [form.birthdate],
-  );
-  const birthDatePart = rawBirthDatePart || DEFAULT_BIRTHDATE;
-  const birthTimePart = rawBirthTimePart || DEFAULT_BIRTH_TIME;
-
-  const {
-    year: birthYear,
-    month: birthMonth,
-    day: birthDay,
-  } = useMemo(
-    () => parseBirthdateParts(birthDatePart, DEFAULT_BIRTHDATE, currentYear),
-    [birthDatePart, currentYear],
-  );
-  const { hour: birthHour, minute: birthMinute } = useMemo(
-    () => parseTimeParts(birthTimePart, DEFAULT_BIRTH_TIME),
-    [birthTimePart],
-  );
-
   const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => pad2(i)), []);
-  const birthMinuteOptions = useMemo(() => Array.from({ length: 60 }, (_, i) => pad2(i)), []);
   const notifyMinuteOptions = useMemo(
     () =>
       Array.from({ length: 60 / NOTIFICATION_MINUTE_STEP }, (_, i) =>
@@ -311,16 +202,6 @@ const SettingsSheet: React.FC<Props> = ({
       ),
     [],
   );
-  const birthYearOptions = useMemo(
-    () =>
-      Array.from({ length: currentYear - MIN_BIRTH_YEAR + 1 }, (_, i) => String(currentYear - i)),
-    [currentYear],
-  );
-  const birthMonthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => pad2(i + 1)), []);
-  const birthDayOptions = useMemo(() => {
-    const daysInMonth = getDaysInMonth(Number(birthYear), Number(birthMonth));
-    return Array.from({ length: daysInMonth }, (_, i) => pad2(i + 1));
-  }, [birthMonth, birthYear]);
 
   useEffect(() => {
     panelWidthRef.current = panelWidth;
@@ -372,17 +253,6 @@ const SettingsSheet: React.FC<Props> = ({
   }, [visible, isRendered, overlayOpacity, panelTranslateX]);
 
   useEffect(() => {
-    if (!form.birthdate.trim()) return;
-    const normalizedDay = clampBirthDay(birthYear, birthMonth, birthDay);
-    if (normalizedDay !== birthDay) {
-      setForm((prev) => ({
-        ...prev,
-        birthdate: buildBirthDateTime(birthYear, birthMonth, normalizedDay, birthHour, birthMinute),
-      }));
-    }
-  }, [birthDay, birthMonth, birthYear, birthHour, birthMinute, form.birthdate]);
-
-  useEffect(() => {
     if (visible) {
       const trimmed = settings.notificationTime.trim();
       const parsed = parseTimeParts(
@@ -393,39 +263,17 @@ const SettingsSheet: React.FC<Props> = ({
         parsed.minute,
         NOTIFICATION_MINUTE_STEP,
       )}`;
-      const trimmedBirthdate = settings.birthdate.trim();
-      const normalizedBirthdate = trimmedBirthdate
-        ? (() => {
-            const { datePart, timePart } = splitDateTime(trimmedBirthdate);
-            const parsedBirthdate = parseBirthdateParts(
-              datePart || DEFAULT_BIRTHDATE,
-              DEFAULT_BIRTHDATE,
-              currentYear,
-            );
-            const parsedTime = parseTimeParts(timePart || DEFAULT_BIRTH_TIME, DEFAULT_BIRTH_TIME);
-            return buildBirthDateTime(
-              parsedBirthdate.year,
-              parsedBirthdate.month,
-              parsedBirthdate.day,
-              parsedTime.hour,
-              parsedTime.minute,
-            );
-          })()
-        : settings.birthdate;
       setForm({
         ...settings,
         notificationTime: trimmed ? normalizedTime : settings.notificationTime,
-        birthdate: trimmedBirthdate ? normalizedBirthdate : settings.birthdate,
       });
     }
-  }, [visible, settings, currentYear]);
+  }, [visible, settings]);
 
   useEffect(() => {
     if (!visible) {
       setIsFetching(false);
       setIsNotifyModalOpen(false);
-      setIsBirthModalOpen(false);
-      setIsBirthTimeModalOpen(false);
       return;
     }
 
@@ -461,39 +309,11 @@ const SettingsSheet: React.FC<Props> = ({
 
   const openNotifyModal = () => {
     setIsNotifyModalOpen(true);
-    setIsBirthModalOpen(false);
-    setIsBirthTimeModalOpen(false);
     const normalizedTime = `${notifyHour}:${notifyMinute}`;
     if (form.notificationTime.trim() !== normalizedTime) {
       update({ notificationTime: normalizedTime });
     }
   };
-
-  const openBirthModal = () => {
-    setIsBirthModalOpen(true);
-    setIsBirthTimeModalOpen(false);
-    setIsNotifyModalOpen(false);
-    if (!form.birthdate.trim()) {
-      update({
-        birthdate: buildBirthDateTime(birthYear, birthMonth, birthDay, birthHour, birthMinute),
-      });
-    }
-  };
-
-  const openBirthTimeModal = () => {
-    setIsBirthTimeModalOpen(true);
-    setIsBirthModalOpen(false);
-    setIsNotifyModalOpen(false);
-    if (!form.birthdate.trim()) {
-      update({
-        birthdate: buildBirthDateTime(birthYear, birthMonth, birthDay, birthHour, birthMinute),
-      });
-    }
-  };
-
-  const birthDateSummary = `${birthYear}-${birthMonth}-${birthDay}`;
-  const birthTimeSummary = `${birthHour}:${birthMinute}`;
-  const hasBirthdate = form.birthdate.trim() !== '';
 
   const handleSave = async () => {
     if (isBusy) return;
@@ -541,7 +361,7 @@ const SettingsSheet: React.FC<Props> = ({
           />
 
           <Animated.View
-            className="absolute bottom-0 right-0 top-0 gap-6 rounded-l-2xl border-l border-gray-200 bg-white px-5"
+            className="absolute bottom-0 right-0 top-0 rounded-l-2xl border-l border-stone-200 bg-[#FFFBF5]"
             style={[
               {
                 width: panelWidth,
@@ -556,120 +376,109 @@ const SettingsSheet: React.FC<Props> = ({
               },
             ]}
           >
-            <View className="flex-row items-center justify-between py-3">
-              <View className="flex-row items-center space-x-2">
-                <Text className="text-xl font-extrabold text-gray-900">설정</Text>
-                {isFetching && <ActivityIndicator size="small" color="#6b7280" />}
+            <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+              {/* 헤더 */}
+              <View className="flex-row items-center justify-between py-3">
+                <View className="flex-row items-center space-x-2">
+                  <Text className="text-xl font-extrabold text-stone-800">설정</Text>
+                  {isFetching && <ActivityIndicator size="small" color="#78716c" />}
+                </View>
+                <Pressable
+                  onPress={onClose}
+                  hitSlop={12}
+                  className="rounded-full p-2 active:opacity-70"
+                >
+                  <Feather name="x" size={22} color="#78716c" />
+                </Pressable>
               </View>
+
+              {/* 프로필 섹션 */}
+              <View className="mt-4 gap-4">
+                <Text className="text-sm font-semibold uppercase tracking-wide text-stone-400">
+                  내 프로필
+                </Text>
+                <View className="overflow-hidden rounded-xl bg-white shadow-sm">
+                  <View className="flex-row items-center px-4 py-4 border-b border-stone-100">
+                    <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
+                      <Feather name="user" size={18} color="#10b981" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sm text-stone-400">닉네임</Text>
+                      <TextInput
+                        value={form.nickname}
+                        onChangeText={(text) => update({ nickname: text })}
+                        placeholder="입력해주세요"
+                        placeholderTextColor="#d1d5db"
+                        className="text-base font-semibold text-stone-700"
+                      />
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* 알림 섹션 */}
+              <View className="mt-6 gap-4">
+                <Text className="text-sm font-semibold uppercase tracking-wide text-stone-400">
+                  알림
+                </Text>
+                <Pressable
+                  onPress={openNotifyModal}
+                  disabled={isBusy}
+                  className="overflow-hidden rounded-xl bg-white shadow-sm"
+                >
+                  <View className="flex-row items-center justify-between px-4 py-4">
+                    <View className="flex-row items-center">
+                      <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                        <Feather name="bell" size={18} color="#f59e0b" />
+                      </View>
+                      <View>
+                        <Text className="text-sm text-stone-400">미션 알림 시간</Text>
+                        <Text className="text-base font-semibold text-stone-700">
+                          {`${notifyHour}:${notifyMinute}`}
+                        </Text>
+                      </View>
+                    </View>
+                    <Feather name="chevron-right" size={20} color="#a8a29e" />
+                  </View>
+                </Pressable>
+              </View>
+
+              {/* 저장 버튼 */}
               <Pressable
-                onPress={onClose}
-                hitSlop={12}
-                className="rounded-full p-2 active:opacity-70"
+                className={`mt-6 flex-row items-center justify-center rounded-xl py-4 ${
+                  isBusy ? 'bg-stone-700' : 'bg-stone-800'
+                }`}
+                onPress={handleSave}
+                disabled={isBusy}
               >
-                <Feather name="x" size={22} color="#6b7280" />
+                {isSaving && <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />}
+                <Text className="text-center text-lg font-extrabold text-white">저장하기</Text>
               </Pressable>
-            </View>
 
-            <View className="gap-5">
-              <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                내 정보
-              </Text>
-              <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-                <Row label="닉네임" divider>
-                  <TextInput
-                    value={form.nickname}
-                    onChangeText={(text) => update({ nickname: text })}
-                    placeholder="입력해주세요"
-                    placeholderTextColor="#d1d5db"
-                    className="min-w-[120] text-right text-base text-gray-600"
-                  />
-                </Row>
-                <Row label="생년월일" divider>
-                  <Pressable
-                    onPress={openBirthModal}
-                    disabled={isBusy}
-                    className={`flex-row items-center space-x-2 ${
-                      isBusy ? 'opacity-60' : 'active:opacity-70'
-                    }`}
-                  >
-                    <Text
-                      className={`text-base font-semibold ${
-                        hasBirthdate ? 'text-gray-600' : 'text-gray-400'
-                      }`}
-                    >
-                      {hasBirthdate ? birthDateSummary : 'YYYY-MM-DD'}
-                    </Text>
-                  </Pressable>
-                </Row>
-                <Row label="출생시간">
-                  <Pressable
-                    onPress={openBirthTimeModal}
-                    disabled={isBusy}
-                    className={`flex-row items-center space-x-2 ${
-                      isBusy ? 'opacity-60' : 'active:opacity-70'
-                    }`}
-                  >
-                    <Text
-                      className={`text-base font-semibold ${
-                        hasBirthdate ? 'text-gray-600' : 'text-gray-400'
-                      }`}
-                    >
-                      {hasBirthdate ? birthTimeSummary : 'HH:MM'}
-                    </Text>
-                  </Pressable>
-                </Row>
+              {/* 계정 섹션 */}
+              <View className="mt-8 gap-4">
+                <Text className="text-sm font-semibold uppercase tracking-wide text-stone-400">
+                  계정
+                </Text>
+                <Pressable
+                  className="flex-row items-center justify-center rounded-xl border border-rose-200 bg-rose-50 py-4"
+                  onPress={handleLogout}
+                  disabled={isLoading}
+                >
+                  <Feather name="log-out" size={18} color="#e11d48" />
+                  <Text className="ml-2 text-center text-base font-bold text-rose-600">로그아웃</Text>
+                </Pressable>
               </View>
-            </View>
 
-            <View className="gap-5">
-              <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                알림
-              </Text>
-              <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-                <Row label="알림 시간">
-                  <Pressable
-                    onPress={openNotifyModal}
-                    disabled={isBusy}
-                    className={`flex-row items-center space-x-2 ${
-                      isBusy ? 'opacity-60' : 'active:opacity-70'
-                    }`}
-                  >
-                    <Text className="text-base font-semibold text-gray-600">
-                      {`${notifyHour}:${notifyMinute}`}
-                    </Text>
-                  </Pressable>
-                </Row>
+              {/* 앱 정보 */}
+              <View className="mt-8 items-center pb-4">
+                <Text className="text-xs text-stone-300">사진 미션 일력 v1.0.0</Text>
               </View>
-            </View>
-
-            <Pressable
-              className={`rounded-xl py-4 active:opacity-90 ${
-                isBusy ? 'bg-gray-900/60' : 'bg-gray-900'
-              }`}
-              onPress={handleSave}
-              disabled={isBusy}
-            >
-              <View className="flex-row items-center justify-center space-x-2">
-                {isSaving && <ActivityIndicator size="small" color="#fff" />}
-                <Text className="text-center text-xl font-extrabold text-white">저장하기</Text>
-              </View>
-            </Pressable>
-
-            <View className="gap-5">
-              <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-                계정
-              </Text>
-              <Pressable
-                className="rounded-xl border border-rose-200 bg-rose-50 py-4 active:opacity-90"
-                onPress={handleLogout}
-                disabled={isLoading}
-              >
-                <Text className="text-center text-lg font-bold text-rose-600">로그아웃</Text>
-              </Pressable>
-            </View>
+            </ScrollView>
           </Animated.View>
         </View>
 
+        {/* 알림 시간 선택 모달 */}
         <PickerModal
           visible={isNotifyModalOpen}
           title="알림 시간"
@@ -698,135 +507,9 @@ const SettingsSheet: React.FC<Props> = ({
             </View>
           </View>
         </PickerModal>
-
-        <PickerModal
-          visible={isBirthModalOpen}
-          title="생년월일"
-          onClose={() => setIsBirthModalOpen(false)}
-        >
-          <View className="mb-3 flex-row">
-            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">년</Text>
-            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">월</Text>
-            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">일</Text>
-          </View>
-          <View className="flex-row items-center">
-            <View className="flex-1 items-center">
-              <WheelPicker
-                options={birthYearOptions}
-                value={birthYear}
-                onChange={(nextYear) => {
-                  const nextDay = clampBirthDay(nextYear, birthMonth, birthDay);
-                  update({
-                    birthdate: buildBirthDateTime(
-                      nextYear,
-                      birthMonth,
-                      nextDay,
-                      birthHour,
-                      birthMinute,
-                    ),
-                  });
-                }}
-                itemTextClassName="text-base"
-              />
-            </View>
-            <View className="flex-1 items-center">
-              <WheelPicker
-                options={birthMonthOptions}
-                value={birthMonth}
-                onChange={(nextMonth) => {
-                  const nextDay = clampBirthDay(birthYear, nextMonth, birthDay);
-                  update({
-                    birthdate: buildBirthDateTime(
-                      birthYear,
-                      nextMonth,
-                      nextDay,
-                      birthHour,
-                      birthMinute,
-                    ),
-                  });
-                }}
-              />
-            </View>
-            <View className="flex-1 items-center">
-              <WheelPicker
-                options={birthDayOptions}
-                value={birthDay}
-                onChange={(nextDay) => {
-                  update({
-                    birthdate: buildBirthDateTime(
-                      birthYear,
-                      birthMonth,
-                      nextDay,
-                      birthHour,
-                      birthMinute,
-                    ),
-                  });
-                }}
-              />
-            </View>
-          </View>
-        </PickerModal>
-
-        <PickerModal
-          visible={isBirthTimeModalOpen}
-          title="출생시간"
-          onClose={() => setIsBirthTimeModalOpen(false)}
-        >
-          <View className="mb-3 flex-row">
-            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">시</Text>
-            <Text className="flex-1 text-center text-sm font-semibold text-gray-500">분</Text>
-          </View>
-          <View className="flex-row items-center">
-            <View className="flex-1 items-center">
-              <WheelPicker
-                options={hourOptions}
-                value={birthHour}
-                onChange={(nextHour) =>
-                  update({
-                    birthdate: buildBirthDateTime(
-                      birthYear,
-                      birthMonth,
-                      birthDay,
-                      nextHour,
-                      birthMinute,
-                    ),
-                  })
-                }
-              />
-            </View>
-            <View className="flex-1 items-center">
-              <WheelPicker
-                options={birthMinuteOptions}
-                value={birthMinute}
-                onChange={(nextMinute) =>
-                  update({
-                    birthdate: buildBirthDateTime(
-                      birthYear,
-                      birthMonth,
-                      birthDay,
-                      birthHour,
-                      nextMinute,
-                    ),
-                  })
-                }
-              />
-            </View>
-          </View>
-        </PickerModal>
       </KeyboardAvoidingView>
     </Modal>
   );
 };
-
-const Row: React.FC<{ label: string; children: React.ReactNode; divider?: boolean }> = ({
-  label,
-  children,
-  divider,
-}) => (
-  <View className={`flex-row items-center px-5 py-4 ${divider ? 'border-b border-gray-200' : ''}`}>
-    <Text className="text-base font-semibold text-gray-900">{label}</Text>
-    <View className="flex-1 items-end">{children}</View>
-  </View>
-);
 
 export default SettingsSheet;
