@@ -11,6 +11,10 @@ import UserInfoForm from '@/components/UserInfoForm';
 import CalendarPage from '@/components/CalendarPage';
 import SettingsSheet from '@/components/SettingsSheet';
 import LoginScreen from '@/components/LoginScreen';
+import { WritingHome, WritingOnboarding } from '@/components';
+
+// 앱 모드 설정: 'fortune' (기존 운세 앱) | 'writing' (새 글감 앱)
+const APP_MODE: 'fortune' | 'writing' = 'writing';
 import { useAuth } from '@/providers/AuthProvider';
 import { registerForPushNotificationsAsync } from '@/services/pushNotifications';
 import { updatePushToken } from '@/services/pushTokenService';
@@ -273,6 +277,10 @@ export default function Home() {
   }
 
   if (!hasOnboarded) {
+    // 앱 모드에 따라 다른 온보딩
+    if (APP_MODE === 'writing') {
+      return <WritingOnboarding onComplete={handleOnboardingComplete} />;
+    }
     return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
@@ -288,6 +296,24 @@ export default function Home() {
 
   const showUserForm = needsProfileSetup;
 
+  // 글감 앱 모드
+  if (APP_MODE === 'writing') {
+    return (
+      <View className="flex-1 bg-white">
+        {showUserForm ? (
+          <UserInfoForm
+            initialValues={userSettings || undefined}
+            onSubmit={handleUserInfoSubmit}
+            isSubmitting={profileSaving}
+          />
+        ) : (
+          <WritingHome onLogout={requireLogin} />
+        )}
+      </View>
+    );
+  }
+
+  // 기존 운세 앱 모드
   return (
     <View className="flex-1 bg-white">
       {showUserForm ? (
