@@ -20,6 +20,12 @@ import {
   updateUserProfile,
 } from '@/services/userProfileService';
 
+// 경제 감각 일력 컴포넌트
+import { EconomyHome, EconomyOnboarding } from '@/components/economy';
+
+// 앱 모드 선택: 'fortune' | 'economy'
+const APP_MODE: 'fortune' | 'economy' = 'economy';
+
 const HAS_ONBOARDED_KEY = 'hasOnboarded';
 const USER_SETTINGS_KEY = 'userSettings';
 const HAS_LOGGED_IN_KEY = 'hasLoggedIn';
@@ -273,7 +279,16 @@ export default function Home() {
   }
 
   if (!hasOnboarded) {
+    // 앱 모드에 따른 온보딩
+    if (APP_MODE === 'economy') {
+      return <EconomyOnboarding onComplete={handleOnboardingComplete} />;
+    }
     return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
+
+  // 경제 감각 일력 모드
+  if (APP_MODE === 'economy') {
+    return <EconomyHome onLogout={requireLogin} />;
   }
 
   if (shouldShowLogin) {
