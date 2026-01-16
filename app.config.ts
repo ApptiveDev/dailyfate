@@ -7,7 +7,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
 
   // ===== App 기본 정보 =====
-  name: '운세한장',
+  name: '오늘한장',
   slug: 'dailyfate',
   version: '1.0.6',
 
