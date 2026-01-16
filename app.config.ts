@@ -7,9 +7,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
 
   // ===== App 기본 정보 =====
-  name: '운세한장',
+  name: '오늘한장',
   slug: 'dailyfate',
-  version: '1.0.6',
+  version: '1.0.8',
 
   // ===== 환경 변수 =====
   extra: {
@@ -45,7 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: 'com.dailyfate.frontend',
     infoPlist: {
       ...config.ios?.infoPlist,
-      CFBundleDisplayName: '운세한장', // 👈 iOS 홈 화면 앱 이름
+      CFBundleDisplayName: '오늘한장', // 👈 iOS 홈 화면 앱 이름
       ITSAppUsesNonExemptEncryption: false,
     },
   },
@@ -56,7 +56,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'com.dailyfate.frontend',
 
     // @ts-expect-error - Expo config type does not include `label` yet.
-    label: '운세한장',
+    label: '오늘한장',
 
     adaptiveIcon: {
       ...(config.android?.adaptiveIcon ?? {}),
