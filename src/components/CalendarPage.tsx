@@ -13,16 +13,17 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { FortuneData } from '../types/fortune';
+import { DailyContent, ContentType, CONTENT_CATEGORIES } from '../types/content';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Props {
   date: Date;
   onNext: () => void;
   onPrev: () => void;
-  fortune: FortuneData | null;
+  content: DailyContent | null;
+  contentType: ContentType;
   loading: boolean;
-  onOpenSettings: () => void; // ✅ 필수로
+  onOpenSettings: () => void;
 }
 
 const WEEKDAY_HANJA = ['日', '月', '火', '水', '木', '金', '土'];
@@ -39,10 +40,12 @@ const CalendarPage: React.FC<Props> = ({
   date,
   onNext,
   onPrev,
-  fortune,
+  content,
+  contentType,
   loading,
   onOpenSettings,
 }) => {
+  const contentCategory = CONTENT_CATEGORIES.find((c) => c.type === contentType);
   const scrollRef = useRef<ScrollView | null>(null);
   const tearAnim = useRef(new Animated.Value(0)).current;
   const bounceAnim = useRef(new Animated.Value(0)).current;
@@ -387,13 +390,13 @@ const CalendarPage: React.FC<Props> = ({
                   </Text>
                   <Text className=" mt-1 text-xs text-gray-400 font-wanted-semibold">
                     {/* 음력 정보 포맷팅 */}
-                    {fortune?.lunarDate
+                    {content?.lunarDate
                       ? (() => {
-                          const parts = fortune.lunarDate.split('-');
+                          const parts = content.lunarDate.split('-');
                           if (parts.length === 3) {
                             return `음력 ${parts[1]}/${parts[2]}`;
                           }
-                          return `음력 ${fortune.lunarDate}`;
+                          return `음력 ${content.lunarDate}`;
                         })()
                       : '음력 --'}
                   </Text>
@@ -414,10 +417,10 @@ const CalendarPage: React.FC<Props> = ({
                   <View className="items-center">
                     <ActivityIndicator size="small" color="#d1d5db" />
                     <Text className="mt-2 font-serif text-sm text-gray-300">
-                      운세를 읽고 있습니다...
+                      {contentCategory?.label || '컨텐츠'}를 읽고 있습니다...
                     </Text>
                   </View>
-                ) : fortune ? (
+                ) : content ? (
                   <View className="relative items-center" style={{ minHeight: 7 * 36 }}>
                     {/* 노트 줄 배경 */}
                     <View className="absolute inset-0">
@@ -433,12 +436,12 @@ const CalendarPage: React.FC<Props> = ({
                       className="relative text-center text-lg font-medium text-gray-700 font-wanted-semibold"
                       style={{ lineHeight: 36 }}
                     >
-                      {fortune.overview}
+                      {content.overview}
                     </Text>
                   </View>
                 ) : (
                   <Text className="text-center font-serif text-sm text-gray-300">
-                    운세 정보가 없습니다.
+                    {contentCategory?.label || '컨텐츠'} 정보가 없습니다.
                   </Text>
                 )}
               </View>
@@ -449,7 +452,12 @@ const CalendarPage: React.FC<Props> = ({
               className="absolute inset-x-0 bottom-20 items-center"
             >
               <Feather name="chevron-down" size={28} color="#d1d5db" />
-              <Text className=" font-wanted-semibold text-gray-500">운세 보러가기</Text>
+              <Text className=" font-wanted-semibold text-gray-500">
+                {contentType === 'fortune' && '운세 보러가기'}
+                {contentType === 'history' && '자세히 보기'}
+                {contentType === 'idiom' && '뜻풀이 보기'}
+                {contentType === 'motivation' && '오늘의 생각'}
+              </Text>
             </Animated.View>
           </View>
 
@@ -460,47 +468,69 @@ const CalendarPage: React.FC<Props> = ({
             <View className="mx-auto flex-1 w-full max-w-xl ">
               <View className="mb-3 flex-row items-center opacity-60">
                 <Text className=" text-[11px] font-bold tracking-[0.2em] text-gray-500 font-wanted-semibold">
-                  오늘의 운세
+                  {contentType === 'fortune' && '오늘의 운세'}
+                  {contentType === 'history' && '역사 속 오늘'}
+                  {contentType === 'idiom' && '사자성어 풀이'}
+                  {contentType === 'motivation' && '오늘의 동기부여'}
                 </Text>
                 <View className="ml-2 h-px flex-1 bg-gray-300" />
               </View>
 
-              {fortune ? (
+              {/* 운세 컨텐츠 */}
+              {contentType === 'fortune' && content?.fortune && (
                 <>
-                  <FortuneItem 
-                    icon="dollar-sign" 
-                    label="재물운" 
-                    value={fortune.wealth}
+                  <FortuneItem
+                    icon="dollar-sign"
+                    label="재물운"
+                    value={content.fortune.wealth}
                     iconColor="#d97706"
                     bgColor="#fef3c7"
                   />
-                  <FortuneItem 
-                    icon="heart" 
-                    label="애정운" 
-                    value={fortune.love}
+                  <FortuneItem
+                    icon="heart"
+                    label="애정운"
+                    value={content.fortune.love}
                     iconColor="#dc2626"
                     bgColor="#fee2e2"
                   />
-                  <FortuneItem 
-                    icon="award" 
-                    label="성공운" 
-                    value={fortune.success}
+                  <FortuneItem
+                    icon="award"
+                    label="성공운"
+                    value={content.fortune.success}
                     iconColor="#7c3aed"
                     bgColor="#ede9fe"
                   />
-                  <FortuneItem 
-                    icon="zap" 
-                    label="추천 행동" 
-                    value={fortune.action}
+                  <FortuneItem
+                    icon="zap"
+                    label="추천 행동"
+                    value={content.fortune.action}
                     iconColor="#059669"
                     bgColor="#d1fae5"
-                    isLast 
+                    isLast
                   />
                 </>
-              ) : (
+              )}
+
+              {/* 역사 속 오늘 컨텐츠 */}
+              {contentType === 'history' && content?.history && (
+                <HistoryDetail history={content.history} />
+              )}
+
+              {/* 사자성어 컨텐츠 */}
+              {contentType === 'idiom' && content?.idiom && (
+                <IdiomDetail idiom={content.idiom} />
+              )}
+
+              {/* 동기부여 컨텐츠 */}
+              {contentType === 'motivation' && content?.motivation && (
+                <MotivationDetail motivation={content.motivation} />
+              )}
+
+              {/* 컨텐츠가 없는 경우 */}
+              {!content && (
                 <View className="py-5">
                   <Text className="font-serif text-[15px] text-gray-400">
-                    운세 정보가 없습니다.
+                    {contentCategory?.label || '컨텐츠'} 정보가 없습니다.
                   </Text>
                 </View>
               )}
@@ -524,7 +554,7 @@ interface FortuneItemProps {
 const FortuneItem: React.FC<FortuneItemProps> = ({ icon, label, value, iconColor, bgColor, isLast }) => (
   <View className={`py-4 ${isLast ? '' : 'border-b border-gray-200'}`}>
     <View className="mb-2 flex-row items-center">
-      <View 
+      <View
         className="mr-3 h-9 w-9 items-center justify-center rounded-full"
         style={{ backgroundColor: bgColor }}
       >
@@ -533,6 +563,170 @@ const FortuneItem: React.FC<FortuneItemProps> = ({ icon, label, value, iconColor
       <Text className=" text-lg font-bold text-gray-900 font-wanted-regular">{label}</Text>
     </View>
     <Text className=" text-[15px] leading-7 text-gray-600 font-wanted-regular">{value}</Text>
+  </View>
+);
+
+// 역사 속 오늘 상세 컴포넌트
+import { HistoryData, IdiomData, MotivationData } from '../types/content';
+
+interface HistoryDetailProps {
+  history: HistoryData;
+}
+
+const HistoryDetail: React.FC<HistoryDetailProps> = ({ history }) => (
+  <View className="py-4">
+    <View className="mb-4 flex-row items-center">
+      <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-blue-100">
+        <Feather name="calendar" size={18} color="#2563eb" />
+      </View>
+      <View className="flex-1">
+        <Text className="text-lg font-bold text-gray-900 font-wanted-regular">
+          {history.year}년
+        </Text>
+        <Text className="text-xs text-gray-500 font-wanted-regular">{history.category}</Text>
+      </View>
+    </View>
+    <Text className="text-xl font-bold text-gray-900 mb-3 font-wanted-semibold">
+      {history.title}
+    </Text>
+    <Text className="text-[15px] leading-7 text-gray-600 font-wanted-regular mb-4">
+      {history.description}
+    </Text>
+
+    {/* 왜 중요한가 섹션 */}
+    <View className="py-4 border-t border-gray-200">
+      <View className="mb-2 flex-row items-center">
+        <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-amber-100">
+          <Feather name="star" size={18} color="#d97706" />
+        </View>
+        <Text className="text-lg font-bold text-gray-900 font-wanted-regular">왜 중요한가</Text>
+      </View>
+      <Text className="text-[15px] leading-7 text-gray-600 font-wanted-regular">
+        {history.significance}
+      </Text>
+    </View>
+
+    {/* 더 알아보기 섹션 */}
+    <View className="py-4 border-t border-gray-200">
+      <View className="mb-2 flex-row items-center">
+        <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-green-100">
+          <Feather name="info" size={18} color="#059669" />
+        </View>
+        <Text className="text-lg font-bold text-gray-900 font-wanted-regular">더 알아보기</Text>
+      </View>
+      <Text className="text-[15px] leading-7 text-gray-600 font-wanted-regular">
+        {history.relatedInfo}
+      </Text>
+    </View>
+  </View>
+);
+
+// 사자성어 상세 컴포넌트
+interface IdiomDetailProps {
+  idiom: IdiomData;
+}
+
+const IdiomDetail: React.FC<IdiomDetailProps> = ({ idiom }) => (
+  <View className="py-4">
+    <View className="mb-6 items-center">
+      <Text className="text-4xl font-bold text-gray-900 mb-2 tracking-widest">{idiom.idiom}</Text>
+      <Text className="text-lg text-gray-600 font-wanted-semibold">{idiom.pronunciation}</Text>
+    </View>
+
+    <View className="py-4 border-b border-gray-200">
+      <View className="mb-2 flex-row items-center">
+        <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-amber-100">
+          <Feather name="book-open" size={18} color="#d97706" />
+        </View>
+        <Text className="text-lg font-bold text-gray-900 font-wanted-regular">뜻</Text>
+      </View>
+      <Text className="text-[15px] leading-7 text-gray-600 font-wanted-regular">
+        {idiom.meaning}
+      </Text>
+    </View>
+
+    <View className="py-4 border-b border-gray-200">
+      <View className="mb-2 flex-row items-center">
+        <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-purple-100">
+          <Feather name="clock" size={18} color="#7c3aed" />
+        </View>
+        <Text className="text-lg font-bold text-gray-900 font-wanted-regular">유래</Text>
+      </View>
+      <Text className="text-[15px] leading-7 text-gray-600 font-wanted-regular">
+        {idiom.story}
+      </Text>
+    </View>
+
+    <View className="py-4">
+      <View className="mb-2 flex-row items-center">
+        <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-green-100">
+          <Feather name="message-circle" size={18} color="#059669" />
+        </View>
+        <Text className="text-lg font-bold text-gray-900 font-wanted-regular">예문</Text>
+      </View>
+      <Text className="text-[15px] leading-7 text-gray-600 italic font-wanted-regular">
+        {`"${idiom.example}"`}
+      </Text>
+    </View>
+  </View>
+);
+
+// 동기부여 상세 컴포넌트
+interface MotivationDetailProps {
+  motivation: MotivationData;
+}
+
+const MotivationDetail: React.FC<MotivationDetailProps> = ({ motivation }) => (
+  <View className="py-4">
+    {/* 카테고리 배지 */}
+    <View className="mb-4 items-center">
+      <View className="px-4 py-1.5 bg-purple-100 rounded-full">
+        <Text className="text-sm font-semibold text-purple-700 font-wanted-regular">
+          {motivation.category}
+        </Text>
+      </View>
+    </View>
+
+    <View className="mb-6 p-6 bg-white rounded-2xl border border-gray-100">
+      <Text className="text-xl font-bold text-gray-900 leading-8 mb-4 font-wanted-semibold text-center">
+        {`"${motivation.quote}"`}
+      </Text>
+      <View className="items-center">
+        <Text className="text-base font-semibold text-gray-700 font-wanted-regular">
+          - {motivation.author}
+        </Text>
+        {motivation.authorInfo && (
+          <Text className="text-sm text-gray-500 mt-1 font-wanted-regular">
+            {motivation.authorInfo}
+          </Text>
+        )}
+      </View>
+    </View>
+
+    <View className="py-4 border-b border-gray-200">
+      <View className="mb-2 flex-row items-center">
+        <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-rose-100">
+          <Feather name="heart" size={18} color="#dc2626" />
+        </View>
+        <Text className="text-lg font-bold text-gray-900 font-wanted-regular">오늘의 생각</Text>
+      </View>
+      <Text className="text-[15px] leading-7 text-gray-600 font-wanted-regular">
+        {motivation.reflection}
+      </Text>
+    </View>
+
+    {/* 오늘의 실천 섹션 */}
+    <View className="py-4">
+      <View className="mb-2 flex-row items-center">
+        <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-green-100">
+          <Feather name="check-circle" size={18} color="#059669" />
+        </View>
+        <Text className="text-lg font-bold text-gray-900 font-wanted-regular">오늘의 실천</Text>
+      </View>
+      <Text className="text-[15px] leading-7 text-gray-600 font-wanted-regular">
+        {motivation.action}
+      </Text>
+    </View>
   </View>
 );
 

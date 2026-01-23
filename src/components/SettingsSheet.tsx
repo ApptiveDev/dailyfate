@@ -5,6 +5,7 @@ import {
   Animated,
   Easing,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -15,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { UserSettings } from '../types/fortune';
+import { ContentType, CONTENT_CATEGORIES } from '../types/content';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/providers/AuthProvider';
 import {
@@ -24,10 +26,15 @@ import {
 } from '@/services/userProfileService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+// 문의 이메일 설정
+const SUPPORT_EMAIL = 'bluebird.happier@gmail.com';
+
 interface Props {
   visible: boolean;
   onClose: () => void;
   settings: UserSettings;
+  selectedContent: ContentType;
+  onContentChange: (content: ContentType) => void;
   onSave: (settings: UserSettings) => void;
   onLogout: () => void;
   onUnauthorized: () => void;
@@ -251,6 +258,8 @@ const SettingsSheet: React.FC<Props> = ({
   visible,
   onClose,
   settings,
+  selectedContent,
+  onContentChange,
   onSave,
   onLogout,
   onUnauthorized,
@@ -261,7 +270,9 @@ const SettingsSheet: React.FC<Props> = ({
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const [isBirthModalOpen, setIsBirthModalOpen] = useState(false);
   const [isBirthTimeModalOpen, setIsBirthTimeModalOpen] = useState(false);
-  const { isLoading } = useAuth();
+  const [isContentModalOpen, setIsContentModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { isLoading, signOut } = useAuth();
   const isBusy = isFetching || isSaving;
   const currentYear = useMemo(() => new Date().getFullYear(), []);
   const { width: windowWidth } = useWindowDimensions();
@@ -426,6 +437,7 @@ const SettingsSheet: React.FC<Props> = ({
       setIsNotifyModalOpen(false);
       setIsBirthModalOpen(false);
       setIsBirthTimeModalOpen(false);
+      setIsContentModalOpen(false);
       return;
     }
 
@@ -518,6 +530,67 @@ const SettingsSheet: React.FC<Props> = ({
     onLogout();
   };
 
+  const handleContact = async () => {
+    const subject = encodeURIComponent('[오늘한장] 문의사항');
+    const body = encodeURIComponent(
+      `\n\n\n---\n앱 버전: 1.0.8\n기기: ${Platform.OS}\n닉네임: ${form.nickname || '미설정'}`,
+    );
+    const mailtoUrl = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+
+    try {
+      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl);
+      } else {
+        Alert.alert(
+          '이메일 앱을 열 수 없습니다',
+          `문의사항은 ${SUPPORT_EMAIL}으로 보내주세요.`,
+        );
+      }
+    } catch {
+      Alert.alert('오류', '이메일 앱을 여는 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      '회원 탈퇴',
+      '정말 탈퇴하시겠습니까?\n\n탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '탈퇴하기',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              // TODO: 실제 API 연동 시 deleteUserAccount() 호출
+              // await deleteUserAccount();
+              await signOut();
+              Alert.alert('탈퇴 완료', '회원 탈퇴가 완료되었습니다.');
+              onLogout();
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : '탈퇴 처리 중 오류가 발생했습니다.';
+              Alert.alert('탈퇴 실패', message);
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const openContentModal = () => {
+    setIsContentModalOpen(true);
+    setIsNotifyModalOpen(false);
+    setIsBirthModalOpen(false);
+    setIsBirthTimeModalOpen(false);
+  };
+
+  const currentContentCategory = CONTENT_CATEGORIES.find((c) => c.type === selectedContent);
+
   const insets = useSafeAreaInsets();
 
   if (!isRendered) return null;
@@ -570,6 +643,11 @@ const SettingsSheet: React.FC<Props> = ({
               </Pressable>
             </View>
 
+            <ScrollView
+              className="flex-1"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ gap: 24, paddingBottom: 20 }}
+            >
             <View className="gap-5">
               <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                 내 정보
@@ -642,6 +720,29 @@ const SettingsSheet: React.FC<Props> = ({
               </View>
             </View>
 
+            <View className="gap-5">
+              <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                일력 콘텐츠
+              </Text>
+              <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <Row label="콘텐츠 선택">
+                  <Pressable
+                    onPress={openContentModal}
+                    disabled={isBusy}
+                    className={`flex-row items-center space-x-2 ${
+                      isBusy ? 'opacity-60' : 'active:opacity-70'
+                    }`}
+                  >
+                    <Text className="text-base mr-1">{currentContentCategory?.icon}</Text>
+                    <Text className="text-base font-semibold text-gray-600">
+                      {currentContentCategory?.label || '선택'}
+                    </Text>
+                    <Feather name="chevron-right" size={16} color="#9ca3af" />
+                  </Pressable>
+                </Row>
+              </View>
+            </View>
+
             <Pressable
               className={`rounded-xl py-4 active:opacity-90 ${
                 isBusy ? 'bg-gray-900/60' : 'bg-gray-900'
@@ -657,16 +758,48 @@ const SettingsSheet: React.FC<Props> = ({
 
             <View className="gap-5">
               <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+                지원
+              </Text>
+              <View className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <Pressable onPress={handleContact} className="active:opacity-70">
+                  <View className="flex-row items-center px-5 py-4">
+                    <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+                      <Feather name="mail" size={16} color="#2563eb" />
+                    </View>
+                    <Text className="flex-1 text-base font-semibold text-gray-900">문의하기</Text>
+                    <Feather name="chevron-right" size={18} color="#9ca3af" />
+                  </View>
+                </Pressable>
+              </View>
+            </View>
+
+            <View className="gap-5">
+              <Text className="text-sm font-semibold uppercase tracking-wide text-gray-500">
                 계정
               </Text>
-              <Pressable
-                className="rounded-xl border border-rose-200 bg-rose-50 py-4 active:opacity-90"
-                onPress={handleLogout}
-                disabled={isLoading}
-              >
-                <Text className="text-center text-lg font-bold text-rose-600">로그아웃</Text>
-              </Pressable>
+              <View className="gap-3">
+                <Pressable
+                  className="rounded-xl border border-gray-200 bg-white py-4 active:opacity-90"
+                  onPress={handleLogout}
+                  disabled={isLoading}
+                >
+                  <Text className="text-center text-lg font-bold text-gray-700">로그아웃</Text>
+                </Pressable>
+                <Pressable
+                  className={`rounded-xl border border-rose-200 bg-rose-50 py-4 active:opacity-90 ${
+                    isDeleting ? 'opacity-60' : ''
+                  }`}
+                  onPress={handleDeleteAccount}
+                  disabled={isLoading || isDeleting}
+                >
+                  <View className="flex-row items-center justify-center space-x-2">
+                    {isDeleting && <ActivityIndicator size="small" color="#dc2626" />}
+                    <Text className="text-center text-lg font-bold text-rose-600">회원 탈퇴</Text>
+                  </View>
+                </Pressable>
+              </View>
             </View>
+            </ScrollView>
           </Animated.View>
         </View>
 
@@ -813,6 +946,75 @@ const SettingsSheet: React.FC<Props> = ({
             </View>
           </View>
         </PickerModal>
+
+        {/* 콘텐츠 선택 모달 */}
+        <Modal
+          visible={isContentModalOpen}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setIsContentModalOpen(false)}
+        >
+          <View className="flex-1 items-center justify-center bg-black/40 px-6">
+            <Pressable
+              className="absolute inset-0"
+              onPress={() => setIsContentModalOpen(false)}
+            />
+            <View className="w-full max-w-sm rounded-2xl bg-white p-6">
+              <View className="mb-5 flex-row items-center justify-between">
+                <Text className="text-xl font-extrabold text-gray-900">콘텐츠 선택</Text>
+                <Pressable
+                  onPress={() => setIsContentModalOpen(false)}
+                  hitSlop={10}
+                  className="rounded-full px-2 py-1"
+                >
+                  <Text className="text-base font-semibold text-gray-500">닫기</Text>
+                </Pressable>
+              </View>
+              <View className="gap-3">
+                {CONTENT_CATEGORIES.map((cat) => {
+                  const isSelected = cat.type === selectedContent;
+                  return (
+                    <Pressable
+                      key={cat.type}
+                      onPress={() => {
+                        onContentChange(cat.type);
+                        setIsContentModalOpen(false);
+                      }}
+                      className="active:opacity-80"
+                    >
+                      <View
+                        className={`flex-row items-center px-4 py-3.5 rounded-xl ${
+                          isSelected
+                            ? 'bg-gray-900'
+                            : 'bg-gray-50 border border-gray-100'
+                        }`}
+                      >
+                        <Text className="text-xl mr-3">{cat.icon}</Text>
+                        <View className="flex-1">
+                          <Text
+                            className={`text-base font-semibold ${
+                              isSelected ? 'text-white' : 'text-gray-800'
+                            }`}
+                          >
+                            {cat.label}
+                          </Text>
+                          <Text
+                            className={`text-xs mt-0.5 ${
+                              isSelected ? 'text-gray-300' : 'text-gray-500'
+                            }`}
+                          >
+                            {cat.description}
+                          </Text>
+                        </View>
+                        {isSelected && <Feather name="check" size={20} color="white" />}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </Modal>
   );

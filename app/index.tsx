@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from 'expo-router';
 
 import { useFortune } from '@/hooks/useFortune';
-import { UserSettings } from '@/types';
+import { UserSettings, ContentType, generateDummyContent, DailyContent } from '@/types';
 import Onboarding from '@/components/Onboarding';
 import UserInfoForm from '@/components/UserInfoForm';
 import CalendarPage from '@/components/CalendarPage';
@@ -23,6 +23,7 @@ import {
 const HAS_ONBOARDED_KEY = 'hasOnboarded';
 const USER_SETTINGS_KEY = 'userSettings';
 const HAS_LOGGED_IN_KEY = 'hasLoggedIn';
+const SELECTED_CONTENT_KEY = 'selectedContent';
 type LoginMode = 'signIn' | 'signUp';
 
 export default function Home() {
@@ -40,6 +41,7 @@ export default function Home() {
   const [forceLogin, setForceLogin] = useState(false);
   const [pushToken, setPushToken] = useState<string | null>(null);
   const [loginMode, setLoginMode] = useState<LoginMode>('signIn');
+  const [selectedContent, setSelectedContent] = useState<ContentType>('fortune');
 
   const { isBootstrapping: authBootstrapping, isSignedIn, signOut } = useAuth();
 
@@ -53,25 +55,49 @@ export default function Home() {
     !needsProfileSetup &&
     !profileLoading;
 
+  // 운세만 API에서 로드, 나머지는 더미데이터 사용
+  const shouldLoadFortune = selectedContent === 'fortune' && canLoadFortune;
+
   const {
     fortune,
     loading: loadingFortune,
     error,
-  } = useFortune(currentDate, canLoadFortune);
+  } = useFortune(currentDate, shouldLoadFortune);
+
+  // 선택된 컨텐츠에 따라 데일리 컨텐츠 생성
+  const dailyContent: DailyContent | null = React.useMemo(() => {
+    if (selectedContent === 'fortune') {
+      if (fortune) {
+        return {
+          type: 'fortune' as const,
+          overview: fortune.overview,
+          lunarDate: fortune.lunarDate,
+          fortune,
+        };
+      }
+      return null;
+    }
+    // fortune이 아닌 컨텐츠는 더미데이터 사용
+    return generateDummyContent(selectedContent, currentDate);
+  }, [selectedContent, currentDate, fortune]);
+
+  const isContentLoading = selectedContent === 'fortune' ? loadingFortune : false;
 
   // Load persisted state
   useEffect(() => {
     const load = async () => {
       try {
-        const [onboardedRaw, settingsRaw, loggedInRaw] = await Promise.all([
+        const [onboardedRaw, settingsRaw, loggedInRaw, contentRaw] = await Promise.all([
           AsyncStorage.getItem(HAS_ONBOARDED_KEY),
           AsyncStorage.getItem(USER_SETTINGS_KEY),
           AsyncStorage.getItem(HAS_LOGGED_IN_KEY),
+          AsyncStorage.getItem(SELECTED_CONTENT_KEY),
         ]);
 
         if (onboardedRaw === 'true') setHasOnboarded(true);
         if (settingsRaw) setUserSettings(JSON.parse(settingsRaw));
         if (loggedInRaw === 'true') setHasLoggedIn(true);
+        if (contentRaw) setSelectedContent(contentRaw as ContentType);
       } catch (error) {
         console.warn('Failed to load saved state', error);
       } finally {
@@ -213,9 +239,16 @@ export default function Home() {
     setLoginMode('signIn');
   }, [persistHasLoggedIn]);
 
-  const handleOnboardingComplete = (mode: LoginMode = 'signIn') => {
+  const handleOnboardingComplete = async (mode: LoginMode = 'signIn', content: ContentType = 'fortune') => {
     setLoginMode(mode);
+    setSelectedContent(content);
+    await AsyncStorage.setItem(SELECTED_CONTENT_KEY, content);
     void persistHasOnboarded();
+  };
+
+  const handleContentChange = async (content: ContentType) => {
+    setSelectedContent(content);
+    await AsyncStorage.setItem(SELECTED_CONTENT_KEY, content);
   };
 
   const handleUserInfoSubmit = async (settings: UserSettings) => {
@@ -301,8 +334,9 @@ export default function Home() {
           date={currentDate}
           onNext={handleNextDay}
           onPrev={handlePrevDay}
-          fortune={fortune}
-          loading={loadingFortune}
+          content={dailyContent}
+          contentType={selectedContent}
+          loading={isContentLoading}
           onOpenSettings={() => {
             if (userSettings) {
               setIsSettingsOpen(true);
@@ -317,6 +351,8 @@ export default function Home() {
         <SettingsSheet
           visible={isSettingsOpen}
           settings={userSettings}
+          selectedContent={selectedContent}
+          onContentChange={handleContentChange}
           onClose={() => setIsSettingsOpen(false)}
           onSave={async (nextSettings) => {
             await persistUserSettings(nextSettings);
