@@ -11,6 +11,7 @@ module.exports = {
         'noto-extrabold': ['NotoSerifKR_800ExtraBold'],
         'wanted-regular': ['WantedSans-Regular'],
         'wanted-semibold': ['WantedSans-SemiBold'],
+        'wanted-bold': ['WantedSans-Bold'],
       },
     },
   },

@@ -1,14 +1,17 @@
-import React from 'react';
-import {
-  Dimensions,
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { Dimensions, Pressable, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MonthlyStats, PhotoEntry } from '../types/fortune';
+import {
+  Box,
+  Text,
+  Heading,
+  VStack,
+  HStack,
+  Center,
+  Card,
+} from './ui';
 
 interface Props {
   year: number;
@@ -22,15 +25,6 @@ interface Props {
   onOpenSettings: () => void;
 }
 
-const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const GRID_PADDING = 16;
-const GRID_GAP = 4;
-const CELL_SIZE = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP * 6) / 7;
-
-const getDaysInMonth = (year: number, month: number) => new Date(year, month, 0).getDate();
-const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month - 1, 1).getDay();
-
 const MonthlyAlbumPage: React.FC<Props> = ({
   year,
   month,
@@ -43,15 +37,24 @@ const MonthlyAlbumPage: React.FC<Props> = ({
   onOpenSettings,
 }) => {
   const insets = useSafeAreaInsets();
+  const monthScrollRef = useRef<ScrollView>(null);
   const today = new Date();
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
   const todayDate = today.getDate();
 
-  const daysInMonth = getDaysInMonth(year, month);
-  const firstDay = getFirstDayOfMonth(year, month);
-  const completionRate = stats ? Math.round((stats.completedDays / stats.totalDays) * 100) : 0;
+  const MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-  // 날짜별 사진 매핑
+  const SCREEN_WIDTH = Dimensions.get('window').width;
+  const GRID_GAP = 6;
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstDay = new Date(year, month - 1, 1).getDay();
+
   const photosByDate: Record<number, PhotoEntry> = {};
   photos.forEach((photo) => {
     const photoDate = new Date(photo.date);
@@ -60,254 +63,203 @@ const MonthlyAlbumPage: React.FC<Props> = ({
     }
   });
 
-  // 캘린더 그리드 생성
   const calendarDays: (number | null)[] = [];
-
-  // 첫 주의 빈 칸
-  for (let i = 0; i < firstDay; i++) {
-    calendarDays.push(null);
-  }
-
-  // 날짜 채우기
-  for (let day = 1; day <= daysInMonth; day++) {
-    calendarDays.push(day);
-  }
-
-  // 마지막 주의 빈 칸 (7의 배수로 맞추기)
-  while (calendarDays.length % 7 !== 0) {
-    calendarDays.push(null);
-  }
+  for (let i = 0; i < firstDay; i++) calendarDays.push(null);
+  for (let d = 1; d <= daysInMonth; d++) calendarDays.push(d);
+  while (calendarDays.length % 7 !== 0) calendarDays.push(null);
 
   const weeks: (number | null)[][] = [];
   for (let i = 0; i < calendarDays.length; i += 7) {
     weeks.push(calendarDays.slice(i, i + 7));
   }
 
-  const canGoNext = () => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      monthScrollRef.current?.scrollTo({ x: (month - 1) * 80 - 100, animated: false });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [month]);
+
+  const handleMonthSelect = (selectedMonth: number) => {
     const now = new Date();
-    return year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1);
+    const maxMonth = now.getFullYear() === year ? now.getMonth() + 1 : 12;
+    if (selectedMonth <= maxMonth) {
+      if (selectedMonth < month) {
+        for (let i = 0; i < month - selectedMonth; i++) onPrevMonth();
+      } else if (selectedMonth > month) {
+        for (let i = 0; i < selectedMonth - month; i++) onNextMonth();
+      }
+    }
   };
 
   return (
-    <View className="flex-1 bg-[#FFFBF5]">
-      {/* 헤더 */}
-      <View
-        className="z-10 bg-[#FFFBF5] px-5"
-        style={{ paddingTop: insets.top + 12 }}
-      >
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center">
-            <Pressable
-              onPress={onPrevMonth}
-              hitSlop={12}
-              className="rounded-full bg-white p-2.5 shadow-sm"
-            >
-              <Feather name="chevron-left" size={20} color="#57534e" />
-            </Pressable>
-
-            <View className="mx-4 flex-row items-baseline">
-              <Text className="font-serif text-3xl font-bold text-stone-800">
-                {year}
-              </Text>
-              <Text className="mx-1 text-lg text-stone-400">.</Text>
-              <Text className="font-serif text-3xl font-bold text-stone-800">
-                {String(month).padStart(2, '0')}
-              </Text>
-            </View>
-
-            <Pressable
-              onPress={onNextMonth}
-              hitSlop={12}
-              disabled={!canGoNext()}
-              className={`rounded-full bg-white p-2.5 shadow-sm ${!canGoNext() ? 'opacity-30' : ''}`}
-            >
-              <Feather name="chevron-right" size={20} color="#57534e" />
-            </Pressable>
-          </View>
-
+    <Box className="flex-1 bg-white">
+      <Box className="px-6" style={{ paddingTop: insets.top + 16 }}>
+        <HStack className="items-center justify-between">
           <Pressable
             onPress={onOpenSettings}
-            hitSlop={12}
-            className="rounded-full bg-white p-2.5 shadow-sm"
+            className="h-10 w-10 items-center justify-center rounded-full bg-black"
           >
-            <Feather name="settings" size={20} color="#57534e" />
+            <Feather name="user" size={18} color="#fff" />
           </Pressable>
-        </View>
-      </View>
+          <Heading className="text-lg text-black">{year}</Heading>
+          <Box className="w-10" />
+        </HStack>
+      </Box>
+
+      <ScrollView
+        ref={monthScrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        className="mt-6"
+        contentContainerStyle={{ paddingHorizontal: 24 }}
+      >
+        {MONTH_NAMES.map((name, index) => {
+          const monthNum = index + 1;
+          const isSelected = monthNum === month;
+          const now = new Date();
+          const isDisabled = year === now.getFullYear() && monthNum > now.getMonth() + 1;
+
+          return (
+            <Pressable
+              key={name}
+              onPress={() => handleMonthSelect(monthNum)}
+              disabled={isDisabled}
+              className="mr-4"
+            >
+              <Text
+                className={`text-xl ${
+                  isSelected
+                    ? 'font-bold text-black'
+                    : isDisabled
+                    ? 'font-light text-neutral-200'
+                    : 'font-light text-neutral-400'
+                }`}
+              >
+                {name}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* 요일 헤더 */}
-        <View className="mt-6 flex-row px-4">
-          {WEEKDAY_LABELS.map((label, index) => (
-            <View
-              key={label}
-              style={{ width: CELL_SIZE, marginHorizontal: GRID_GAP / 2 }}
-              className="items-center py-2"
-            >
-              <Text
-                className={`text-xs font-bold ${
-                  index === 0 ? 'text-red-400' : index === 6 ? 'text-blue-400' : 'text-stone-400'
-                }`}
+        <Card className="mx-6 mt-6 p-4 rounded-2xl border border-neutral-100">
+          <HStack className="mb-2">
+            {WEEKDAY_LABELS.map((label, index) => (
+              <Center
+                key={`${label}-${index}`}
+                style={{ width: (SCREEN_WIDTH - 48 - 32 - GRID_GAP * 6) / 7 }}
+                className="py-2"
               >
-                {label}
-              </Text>
-            </View>
-          ))}
-        </View>
+                <Text className="text-xs font-medium text-neutral-400">
+                  {label}
+                </Text>
+              </Center>
+            ))}
+          </HStack>
 
-        {/* 캘린더 그리드 */}
-        <View className="px-4">
           {weeks.map((week, weekIndex) => (
-            <View key={weekIndex} className="mb-1 flex-row">
-              {week.map((day, dayIndex) => {
-                if (day === null) {
-                  return (
-                    <View
-                      key={`empty-${dayIndex}`}
-                      style={{
-                        width: CELL_SIZE,
-                        height: CELL_SIZE,
-                        marginHorizontal: GRID_GAP / 2,
-                      }}
-                    />
-                  );
-                }
+            <HStack key={weekIndex} style={{ marginBottom: GRID_GAP }}>
+              {week.map((dayValue, dayIndex) => {
+                const cellWidth = (SCREEN_WIDTH - 48 - 32 - GRID_GAP * 6) / 7;
+                if (dayValue === null) return <Box key={`empty-${dayIndex}`} style={{ width: cellWidth, height: cellWidth }} />;
 
-                const photo = photosByDate[day];
-                const isToday = isCurrentMonth && day === todayDate;
-                const isPast = isCurrentMonth ? day < todayDate : true;
-                const isFuture = isCurrentMonth && day > todayDate;
+                const photo = photosByDate[dayValue];
+                const isToday = isCurrentMonth && dayValue === todayDate;
+                const isPast = isCurrentMonth ? dayValue < todayDate : true;
+                const isFuture = isCurrentMonth && dayValue > todayDate;
 
                 return (
                   <Pressable
-                    key={day}
+                    key={dayValue}
                     onPress={() => {
-                      if (photo) {
-                        onSelectPhoto(photo);
-                      } else if (!isFuture) {
-                        onSelectEmptyDay(new Date(year, month - 1, day));
-                      }
+                      if (photo) onSelectPhoto(photo);
+                      else if (!isFuture) onSelectEmptyDay(new Date(year, month - 1, dayValue));
                     }}
                     disabled={isFuture}
-                    style={{
-                      width: CELL_SIZE,
-                      height: CELL_SIZE,
-                      marginHorizontal: GRID_GAP / 2,
-                    }}
-                    className={`mb-1 overflow-hidden rounded-xl ${
-                      isFuture ? 'opacity-30' : ''
-                    }`}
+                    style={{ width: cellWidth, height: cellWidth }}
                   >
                     {photo ? (
-                      /* 사진이 있는 날 */
-                      <View className="flex-1 items-center justify-center bg-emerald-100">
-                        <View className="absolute inset-0 items-center justify-center">
-                          <Feather name="image" size={20} color="#10b981" />
-                        </View>
-                        <View className="absolute bottom-1 right-1 h-4 w-4 items-center justify-center rounded-full bg-emerald-500">
-                          <Feather name="check" size={10} color="#ffffff" />
-                        </View>
-                        {/* 날짜 표시 */}
-                        <Text className="absolute top-1 left-1.5 text-[10px] font-bold text-emerald-600">
-                          {day}
-                        </Text>
-                      </View>
-                    ) : isPast ? (
-                      /* 과거인데 사진이 없는 날 */
-                      <View className="flex-1 items-center justify-center bg-stone-100">
-                        <Text className="text-[10px] font-bold text-stone-300">{day}</Text>
-                        <View className="mt-1">
-                          <Feather name="x" size={12} color="#d6d3d1" />
-                        </View>
-                      </View>
+                      <Center className="flex-1 rounded-lg bg-black">
+                        <Feather name="check" size={14} color="#fff" />
+                      </Center>
                     ) : isToday ? (
-                      /* 오늘 */
-                      <View
-                        className="flex-1 items-center justify-center rounded-xl border-2 border-amber-400"
-                        style={{ backgroundColor: '#fffbeb' }}
-                      >
-                        <Text className="text-xs font-extrabold text-amber-600">{day}</Text>
-                        <Text className="mt-0.5 text-[8px] font-bold text-amber-400">TODAY</Text>
-                      </View>
+                      <Center className="flex-1 rounded-lg bg-black">
+                        <Text className="text-xs font-bold text-white">{dayValue}</Text>
+                      </Center>
+                    ) : isPast ? (
+                      <Center className="flex-1 rounded-lg bg-neutral-50">
+                        <Text className="text-xs text-neutral-400">{dayValue}</Text>
+                      </Center>
                     ) : (
-                      /* 미래 날짜 */
-                      <View className="flex-1 items-center justify-center bg-stone-50">
-                        <Text className="text-xs font-semibold text-stone-300">{day}</Text>
-                      </View>
+                      <Center className="flex-1 rounded-lg">
+                        <Text className="text-xs text-neutral-300">{dayValue}</Text>
+                      </Center>
                     )}
                   </Pressable>
                 );
               })}
-            </View>
+            </HStack>
           ))}
-        </View>
+        </Card>
 
-        {/* 월간 통계 */}
-        <View className="mx-4 mt-6 rounded-2xl bg-white p-5 shadow-sm">
-          <Text className="mb-4 text-sm font-semibold uppercase tracking-widest text-stone-400">
-            {month}월 기록
-          </Text>
+        <Box className="mx-6 mt-8">
+          <Text className="text-lg font-bold text-black mb-4">Today</Text>
+          <VStack space="sm">
+            <Card className="p-4 rounded-2xl bg-neutral-50 border-0">
+              <HStack className="justify-between items-center">
+                <HStack space="md" className="items-center">
+                  <Center className="h-8 w-8 rounded-full bg-black">
+                    <Feather name="check" size={14} color="#fff" />
+                  </Center>
+                  <VStack>
+                    <Text className="text-sm font-medium text-black">완료한 미션</Text>
+                    <Text className="text-xs text-neutral-400">이번 달</Text>
+                  </VStack>
+                </HStack>
+                <Text className="text-lg font-bold text-black">{stats?.completedDays || 0}일</Text>
+              </HStack>
+            </Card>
 
-          <View className="flex-row items-center justify-between">
-            <View className="items-center">
-              <Text className="text-3xl font-extrabold text-stone-800">
-                {stats?.completedDays || 0}
-              </Text>
-              <Text className="mt-1 text-xs text-stone-400">완료</Text>
-            </View>
+            <Card className="p-4 rounded-2xl bg-neutral-50 border-0">
+              <HStack className="justify-between items-center">
+                <HStack space="md" className="items-center">
+                  <Center className="h-8 w-8 rounded-full bg-black">
+                    <Feather name="zap" size={14} color="#fff" />
+                  </Center>
+                  <VStack>
+                    <Text className="text-sm font-medium text-black">연속 달성</Text>
+                    <Text className="text-xs text-neutral-400">최장 기록</Text>
+                  </VStack>
+                </HStack>
+                <Text className="text-lg font-bold text-black">{stats?.longestStreak || 0}일</Text>
+              </HStack>
+            </Card>
 
-            <View className="h-12 w-px bg-stone-100" />
-
-            <View className="items-center">
-              <Text className="text-3xl font-extrabold text-stone-800">
-                {stats?.totalDays || daysInMonth}
-              </Text>
-              <Text className="mt-1 text-xs text-stone-400">전체</Text>
-            </View>
-
-            <View className="h-12 w-px bg-stone-100" />
-
-            <View className="items-center">
-              <Text className="text-3xl font-extrabold text-amber-500">
-                {stats?.longestStreak || 0}
-              </Text>
-              <Text className="mt-1 text-xs text-stone-400">최장 연속</Text>
-            </View>
-
-            <View className="h-12 w-px bg-stone-100" />
-
-            <View className="items-center">
-              <Text className="text-3xl font-extrabold text-emerald-500">
-                {completionRate}%
-              </Text>
-              <Text className="mt-1 text-xs text-stone-400">달성률</Text>
-            </View>
-          </View>
-
-          {/* 프로그레스 바 */}
-          <View className="mt-5 h-2 overflow-hidden rounded-full bg-stone-100">
-            <View
-              className="h-full rounded-full bg-emerald-400"
-              style={{ width: `${completionRate}%` }}
-            />
-          </View>
-        </View>
-
-        {/* 월말 앨범 생성 버튼 */}
-        {stats && stats.completedDays > 0 && (
-          <Pressable className="mx-4 mt-4 flex-row items-center justify-center rounded-2xl bg-stone-800 py-4">
-            <Feather name="book-open" size={20} color="#ffffff" />
-            <Text className="ml-3 text-base font-bold text-white">
-              {month}월 앨범 만들기
-            </Text>
-          </Pressable>
-        )}
+            {stats && stats.completedDays > 0 && (
+              <Card className="p-4 rounded-2xl bg-black mt-2 border-0">
+                <HStack className="justify-between items-center">
+                  <VStack>
+                    <Text className="text-sm font-medium text-white">앨범 만들기</Text>
+                    <Text className="text-xs text-neutral-400">
+                      {MONTH_SHORT[month - 1]}의 추억을 저장하세요
+                    </Text>
+                  </VStack>
+                  <Center className="h-10 w-10 rounded-full bg-white">
+                    <Feather name="download" size={18} color="#000" />
+                  </Center>
+                </HStack>
+              </Card>
+            )}
+          </VStack>
+        </Box>
       </ScrollView>
-    </View>
+    </Box>
   );
 };
 

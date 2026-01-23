@@ -3,7 +3,6 @@ import {
   Animated,
   Easing,
   Image,
-  LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -168,42 +167,6 @@ const PhoneMockup: React.FC<{
       <View className="h-5 w-24 rounded-2xl bg-[#191F28]" />
     </View>
     <View className="flex-1 overflow-hidden rounded-[28px] bg-white">{children}</View>
-  </View>
-);
-
-const MockMissionCard: React.FC<{
-  fullHeight?: boolean;
-  className?: string;
-}> = ({ fullHeight = false, className = '' }) => (
-  <View className={`w-full ${fullHeight ? 'flex-1' : 'px-4 pt-4'} ${className}`}>
-    <View className="w-full flex-1 rounded-2xl bg-white p-4">
-      {/* 계절 태그 */}
-      <View className="mb-3 flex-row">
-        <View className="rounded-full bg-emerald-100 px-3 py-1">
-          <Text className="text-[10px] font-bold text-emerald-600">겨울</Text>
-        </View>
-      </View>
-      {/* 주제 */}
-      <Text className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-        오늘의 사진 주제
-      </Text>
-      <Text className="mt-1 text-xl font-bold text-[#191F28]">
-        따뜻한 조명
-      </Text>
-      {/* 사진 영역 */}
-      <View className="mt-4 aspect-square w-full items-center justify-center rounded-xl bg-gray-100">
-        <Feather name="camera" size={32} color="#d1d5db" />
-      </View>
-      {/* 버튼 */}
-      <View className="mt-4 flex-row gap-2">
-        <View className="flex-1 items-center rounded-xl bg-emerald-500 py-3">
-          <Text className="text-xs font-bold text-white">촬영하기</Text>
-        </View>
-        <View className="items-center justify-center rounded-xl border border-gray-200 px-4">
-          <Feather name="image" size={16} color="#9ca3af" />
-        </View>
-      </View>
-    </View>
   </View>
 );
 

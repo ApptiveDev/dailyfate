@@ -16,6 +16,7 @@
   "dependencies": {
     "@expo-google-fonts/noto-serif-kr": "^0.4.2",
     "@expo/vector-icons": "^14.0.2",
+    "@gluestack-ui/nativewind-utils": "^1.0.28",
     "@react-native-async-storage/async-storage": "^1.23.1",
     "@react-navigation/native": "^7.1.25",
     "amazon-cognito-identity-js": "^6.3.16",
@@ -27,6 +28,7 @@
     "expo-notifications": "~0.32.15",
     "expo-router": "^6.0.19",
     "expo-status-bar": "~3.0.9",
+    "lucide-react-native": "^0.563.0",
     "nativewind": "^4.2.1",
     "react": "19.1.0",
     "react-native": "0.81.5",

@@ -31,47 +31,16 @@ type LoginMode = 'signIn' | 'signUp';
 
 // ===== 더미 데이터 =====
 const DUMMY_MISSIONS: Record<string, MissionData> = {
-  '2026-01-16': {
+  '2026-01-24': {
     id: '1',
-    date: '2026-01-16',
-    theme: '따뜻한 조명',
-    seasonTag: '겨울',
-    hint: '카페, 집, 거리의 따뜻한 불빛을 찾아보세요',
-  },
-  '2026-01-15': {
-    id: '2',
-    date: '2026-01-15',
-    theme: '하얀 색',
-    seasonTag: '겨울',
-    hint: '겨울의 흰색을 담아보세요',
-  },
-  '2026-01-14': {
-    id: '3',
-    date: '2026-01-14',
-    theme: '입김',
-    seasonTag: '소한',
-    hint: '추운 날씨에 보이는 입김을 촬영해보세요',
+    date: '2026-01-24',
+    theme: '오늘 퇴근길 풍경은\n어땠나요?',
+    hint: '일상에서 특별한 순간을 찾아보세요',
   },
 };
 
-const DUMMY_PHOTOS: PhotoEntry[] = [
-  {
-    id: '1',
-    missionId: '2',
-    date: '2026-01-15',
-    photoUri: 'dummy://photo1.jpg',
-    caption: '눈 내린 아침',
-    createdAt: '2026-01-15T09:30:00',
-  },
-  {
-    id: '2',
-    missionId: '3',
-    date: '2026-01-14',
-    photoUri: 'dummy://photo2.jpg',
-    caption: '',
-    createdAt: '2026-01-14T08:15:00',
-  },
-];
+const DUMMY_PHOTOS: PhotoEntry[] = [];
+// ===== 더미 데이터 끝 =====
 
 const getDummyStats = (year: number, month: number): MonthlyStats => {
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -139,7 +108,8 @@ export default function Home() {
   const todayMission = DUMMY_MISSIONS[dateKey] || {
     id: 'default',
     date: dateKey,
-    theme: '오늘의 순간',
+    theme: '오늘\n퇴근길 풍경은\n어땠나요?',
+    // theme: 'How was your day? Tell me about it.',
     hint: '일상에서 특별한 순간을 찾아보세요',
   };
   const todayPhoto = DUMMY_PHOTOS.find((p) => p.date === dateKey) || null;

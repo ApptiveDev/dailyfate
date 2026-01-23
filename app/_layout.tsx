@@ -18,7 +18,11 @@ export default function RootLayout() {
     NotoSerifKR_700Bold,
     NotoSerifKR_800ExtraBold,
     // eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef
+    'WantedSans-Regular': require('../assets/fonts/WantedSans-Regular.ttf'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef
     'WantedSans-SemiBold': require('../assets/fonts/WantedSans-SemiBold.ttf'),
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, no-undef
+    'WantedSans-Bold': require('../assets/fonts/WantedSans-Bold.ttf'),
   });
 
   if (!fontsLoaded) {
