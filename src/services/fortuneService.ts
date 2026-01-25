@@ -58,19 +58,6 @@ const readPayload = async (response: Response) => {
   }
 };
 
-const normalizeInsightText = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) return value;
-  const replacements: Array<[RegExp, string]> = [
-    [/재물운/g, '지출 흐름'],
-    [/애정운/g, '관계 흐름'],
-    [/성공운/g, '목표 흐름'],
-    [/운세/g, '오늘의 흐름'],
-    [/행운/g, '좋은 흐름'],
-  ];
-  return replacements.reduce((acc, [pattern, next]) => acc.replace(pattern, next), value);
-};
-
 export async function fetchFortuneByDate(date: Date): Promise<FortuneData> {
   const baseUrl = normalizeBaseUrl(API_CONFIG.BASE_URL);
   if (!baseUrl) {
@@ -117,11 +104,11 @@ export async function fetchFortuneByDate(date: Date): Promise<FortuneData> {
     }
 
     return {
-      overview: normalizeInsightText(fortune.summary),
-      wealth: normalizeInsightText(fortune.money),
-      love: normalizeInsightText(fortune.love),
-      success: normalizeInsightText(fortune.success),
-      action: normalizeInsightText(fortune.recommendedAction),
+      overview: fortune.summary,
+      wealth: fortune.money,
+      love: fortune.love,
+      success: fortune.success,
+      action: fortune.recommendedAction,
       lunarDate: fortune.lunarDate,
     };
   } catch (error) {

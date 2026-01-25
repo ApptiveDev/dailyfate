@@ -9,7 +9,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // ===== App 기본 정보 =====
   name: '오늘한장',
   slug: 'dailyfate',
-  version: '1.0.9',
+  version: '1.0.10',
 
   // ===== 환경 변수 =====
   extra: {
@@ -23,7 +23,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     EXPO_COGNITO_CLIENT_ID: processEnv.EXPO_COGNITO_CLIENT_ID,
     EXPO_COGNITO_TOKEN_USE: processEnv.EXPO_COGNITO_TOKEN_USE,
     EXPO_COGNITO_CODE_TTL_MINUTES: processEnv.EXPO_COGNITO_CODE_TTL_MINUTES,
-    EXPO_ACCOUNT_DELETE_URL: processEnv.EXPO_ACCOUNT_DELETE_URL,
   },
 
   // ===== UI 기본 설정 =====

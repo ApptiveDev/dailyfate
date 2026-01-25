@@ -461,29 +461,29 @@ const CalendarPage: React.FC<Props> = ({
               {fortune ? (
                 <>
                   <InsightItem
-                    icon="credit-card"
+                    icon="dollar-sign"
                     label="지출 점검"
                     value={fortune.wealth}
                     iconColor="#d97706"
                     bgColor="#fef3c7"
                   />
                   <InsightItem
-                    icon="users"
+                    icon="heart"
                     label="관계 메모"
                     value={fortune.love}
-                    iconColor="#0f766e"
-                    bgColor="#ccfbf1"
+                    iconColor="#dc2626"
+                    bgColor="#fee2e2"
                   />
                   <InsightItem
-                    icon="target"
+                    icon="award"
                     label="목표 진행"
                     value={fortune.success}
-                    iconColor="#2563eb"
-                    bgColor="#dbeafe"
+                    iconColor="#7c3aed"
+                    bgColor="#ede9fe"
                   />
                   <InsightItem
-                    icon="check-circle"
-                    label="오늘의 실천"
+                    icon="zap"
+                    label="오늘의 신청"
                     value={fortune.action}
                     iconColor="#059669"
                     bgColor="#d1fae5"

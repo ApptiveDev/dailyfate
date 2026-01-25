@@ -18,8 +18,6 @@ const cognitoCodeTtlRaw =
   extra.EXPO_COGNITO_CODE_TTL_MINUTES || env.EXPO_COGNITO_CODE_TTL_MINUTES;
 const cognitoTokenUse =
   extra.EXPO_COGNITO_TOKEN_USE || env.EXPO_COGNITO_TOKEN_USE || 'access';
-const accountDeleteUrl =
-  extra.EXPO_ACCOUNT_DELETE_URL || env.EXPO_ACCOUNT_DELETE_URL || env.ACCOUNT_DELETE_URL || '';
 
 const cognitoCodeTtlMinutes = (() => {
   const parsed = Number(cognitoCodeTtlRaw);
@@ -44,5 +42,4 @@ export const COGNITO_CONFIG = {
 export const APP_CONFIG = {
   NAME: 'Frontend',
   VERSION: '1.0.0',
-  ACCOUNT_DELETE_URL: accountDeleteUrl,
 };

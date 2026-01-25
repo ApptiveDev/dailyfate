@@ -198,16 +198,6 @@ export default function Home() {
     await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
   };
 
-  const handleAccountDeleted = useCallback(async () => {
-    await AsyncStorage.multiRemove([HAS_LOGGED_IN_KEY, USER_SETTINGS_KEY]);
-    setHasLoggedIn(false);
-    setUserSettings(null);
-    setNeedsProfileSetup(false);
-    setIsSettingsOpen(false);
-    setForceLogin(false);
-    await signOut();
-  }, [signOut]);
-
   const handleSignUpSuccess = useCallback(() => {
     void persistHasLoggedIn();
     setForceLogin(false);
@@ -334,7 +324,6 @@ export default function Home() {
           }}
           onLogout={requireLogin}
           onUnauthorized={requireLogin}
-          onAccountDeleted={handleAccountDeleted}
         />
       )}
     </View>

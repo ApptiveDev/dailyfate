@@ -5,7 +5,6 @@ import {
   Animated,
   Easing,
   KeyboardAvoidingView,
-  Linking,
   Modal,
   Platform,
   Pressable,
@@ -18,10 +17,8 @@ import {
 import { UserSettings } from '../types/fortune';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/providers/AuthProvider';
-import { APP_CONFIG } from '@/constants/config';
 import {
   fetchUserProfile,
-  deleteUserAccount,
   ProfileApiError,
   updateUserProfile,
 } from '@/services/userProfileService';
@@ -34,7 +31,6 @@ interface Props {
   onSave: (settings: UserSettings) => void;
   onLogout: () => void;
   onUnauthorized: () => void;
-  onAccountDeleted: () => Promise<void>;
 }
 
 const ITEM_HEIGHT = 40;
@@ -258,18 +254,15 @@ const SettingsSheet: React.FC<Props> = ({
   onSave,
   onLogout,
   onUnauthorized,
-  onAccountDeleted,
 }) => {
   const [form, setForm] = useState<UserSettings>(settings);
   const [isFetching, setIsFetching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const [isBirthModalOpen, setIsBirthModalOpen] = useState(false);
   const [isBirthTimeModalOpen, setIsBirthTimeModalOpen] = useState(false);
   const { isLoading } = useAuth();
-  const isBusy = isFetching || isSaving || isDeleting;
-  const hasDeleteUrl = Boolean(APP_CONFIG.ACCOUNT_DELETE_URL);
+  const isBusy = isFetching || isSaving;
   const currentYear = useMemo(() => new Date().getFullYear(), []);
   const { width: windowWidth } = useWindowDimensions();
   const panelWidth = Math.min(windowWidth * 0.88, 420);
@@ -430,7 +423,6 @@ const SettingsSheet: React.FC<Props> = ({
   useEffect(() => {
     if (!visible) {
       setIsFetching(false);
-      setIsDeleting(false);
       setIsNotifyModalOpen(false);
       setIsBirthModalOpen(false);
       setIsBirthTimeModalOpen(false);
@@ -524,59 +516,6 @@ const SettingsSheet: React.FC<Props> = ({
 
   const handleLogout = () => {
     onLogout();
-  };
-
-  const openDeleteUrl = async () => {
-    const url = APP_CONFIG.ACCOUNT_DELETE_URL;
-    if (!url) return;
-    try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (!canOpen) {
-        Alert.alert('링크를 열 수 없습니다', '삭제 페이지 링크를 확인해주세요.');
-        return;
-      }
-      await Linking.openURL(url);
-    } catch {
-      Alert.alert('링크를 열 수 없습니다', '삭제 페이지 링크를 확인해주세요.');
-    }
-  };
-
-  const performDeleteAccount = async () => {
-    if (isDeleting) return;
-    setIsDeleting(true);
-    try {
-      await deleteUserAccount();
-      await onAccountDeleted();
-    } catch (error) {
-      if (error instanceof ProfileApiError && error.status === 401) {
-        Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
-        onUnauthorized();
-        return;
-      }
-      const message = error instanceof Error ? error.message : '계정을 삭제하지 못했어요.';
-      if (hasDeleteUrl) {
-        Alert.alert('계정 삭제 실패', message, [
-          { text: '닫기', style: 'cancel' },
-          { text: '웹에서 삭제', onPress: () => void openDeleteUrl() },
-        ]);
-      } else {
-        Alert.alert('계정 삭제 실패', message);
-      }
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleDeleteAccount = () => {
-    if (isBusy) return;
-    Alert.alert(
-      '계정 삭제',
-      '계정을 삭제하면 모든 기록과 설정이 영구 삭제됩니다. 계속할까요?',
-      [
-        { text: '취소', style: 'cancel' },
-        { text: '삭제', style: 'destructive', onPress: () => void performDeleteAccount() },
-      ],
-    );
   };
 
   const insets = useSafeAreaInsets();
@@ -724,7 +663,7 @@ const SettingsSheet: React.FC<Props> = ({
                 <Pressable
                   className="rounded-xl border border-rose-200 bg-rose-50 py-4 active:opacity-90"
                   onPress={handleLogout}
-                  disabled={isLoading || isDeleting}
+                  disabled={isLoading}
                 >
                   <Text className="text-center text-lg font-bold text-rose-600">로그아웃</Text>
                 </Pressable>
@@ -733,29 +672,14 @@ const SettingsSheet: React.FC<Props> = ({
                   className={`rounded-xl py-4 active:opacity-90 ${
                     isBusy || isLoading ? 'bg-rose-600/70' : 'bg-rose-600'
                   }`}
-                  onPress={handleDeleteAccount}
+                  onPress={handleLogout}
                   disabled={isBusy || isLoading}
                 >
-                  <View className="flex-row items-center justify-center space-x-2">
-                    {isDeleting && <ActivityIndicator size="small" color="#fff" />}
-                    <Text className="text-center text-lg font-bold text-white">계정 삭제</Text>
-                  </View>
+                  <Text className="text-center text-lg font-bold text-white">계정 삭제</Text>
                 </Pressable>
                 <Text className="text-center text-xs font-semibold text-rose-500">
-                  삭제하면 모든 기록과 설정이 영구 삭제됩니다.
+                  현재는 로그아웃과 동일하게 처리됩니다.
                 </Text>
-
-                {hasDeleteUrl && (
-                  <Pressable
-                    className="rounded-xl border border-gray-200 bg-white py-3 active:opacity-90"
-                    onPress={openDeleteUrl}
-                    disabled={isDeleting}
-                  >
-                    <Text className="text-center text-sm font-semibold text-gray-600">
-                      웹에서 계정 삭제
-                    </Text>
-                  </Pressable>
-                )}
               </View>
             </View>
           </Animated.View>
