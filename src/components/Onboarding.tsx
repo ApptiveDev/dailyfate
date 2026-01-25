@@ -48,9 +48,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       key: 'intro',
       render: () => (
         <Step1Visual
-          title={'매일 한 장씩 넘기는\n나만의 일력'}
+          title={'매일 한 장씩 넘기는\n나만의 체크인 카드'}
           description={
-            '매일 아침 일력을 뜯는 설렘을 담았습니다.\n당신만을 위한 맞춤형 일력으로 하루를 시작하세요!'
+            '매일 아침 한 장씩 뜯어보는 하루 기록.\n나만의 리듬을 정리하고 하루를 시작하세요!'
           }
         />
       ),
@@ -59,8 +59,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       key: 'tear',
       render: () => (
         <Step2Visual
-          title={'뜯어서 확인하는\n오늘의 한마디'}
-          description={'일력 상단을 드래그하여 일력을 뜯으면\n오늘의 한마디 확인할 수 있어요.'}
+          title={'뜯어서 확인하는\n오늘의 한줄 메모'}
+          description={'상단을 드래그해 한 장을 뜯으면\n오늘의 한줄 메모를 확인할 수 있어요.'}
           phoneWidth={phoneWidth}
           phoneHeight={phoneHeight}
         />
@@ -70,9 +70,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       key: 'scroll',
       render: () => (
         <Step3Visual
-          title={'스크롤로 보는\n 행동 가이드'}
+          title={'스크롤로 보는\n오늘의 체크리스트'}
           description={
-            '스크롤을 내리면 재물운, 애정운, 성공운과\n오늘의 추천 행동까지 상세히 알려드려요.'
+            '스크롤을 내리면 지출 체크, 관계 메모,\n목표 진행과 오늘의 실천을 확인할 수 있어요.'
           }
           phoneWidth={phoneWidth}
           phoneHeight={phoneHeight}
@@ -83,7 +83,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       key: 'tap',
       render: () => (
         <Step4Visual
-          title={'가볍게 탭!\n지난 일력 확인'}
+          title={'가볍게 탭!\n지난 기록 확인'}
           description={
             '왼쪽 영역을 탭하면 하루씩 과거로 이동해요.\n오른쪽 영역을 탭하면 하루씩 오늘 방향으로 돌아올 수 있어요.'
           }
@@ -96,8 +96,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       key: 'lock',
       render: () => (
         <Step5Visual
-          title={'오늘까지만\n확인할 수 있어요'}
-          description={'운세는 오늘까지 제공돼요.\n미래의 운세는 미리 확인할 수 없어요.'}
+          title={'하루 기록은\n오늘에만 열려요'}
+          description={'내일 카드는 내일 도착해요.\n오늘의 기록에 집중하도록 설계했어요.'}
           onComplete={onComplete}
         />
       ),

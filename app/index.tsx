@@ -198,6 +198,16 @@ export default function Home() {
     await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(settings));
   };
 
+  const handleAccountDeleted = useCallback(async () => {
+    await AsyncStorage.multiRemove([HAS_LOGGED_IN_KEY, USER_SETTINGS_KEY]);
+    setHasLoggedIn(false);
+    setUserSettings(null);
+    setNeedsProfileSetup(false);
+    setIsSettingsOpen(false);
+    setForceLogin(false);
+    await signOut();
+  }, [signOut]);
+
   const handleSignUpSuccess = useCallback(() => {
     void persistHasLoggedIn();
     setForceLogin(false);
@@ -245,7 +255,7 @@ export default function Home() {
       Alert.alert('로그인이 필요합니다', '다시 로그인해주세요.');
       return;
     }
-    Alert.alert('운세를 불러오지 못했어요', error.message);
+    Alert.alert('오늘의 기록을 불러오지 못했어요', error.message);
   }, [error, requireLogin]);
 
   const handleNextDay = useCallback(() => {
@@ -324,6 +334,7 @@ export default function Home() {
           }}
           onLogout={requireLogin}
           onUnauthorized={requireLogin}
+          onAccountDeleted={handleAccountDeleted}
         />
       )}
     </View>

@@ -58,6 +58,19 @@ const readPayload = async (response: Response) => {
   }
 };
 
+const normalizeInsightText = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return value;
+  const replacements: Array<[RegExp, string]> = [
+    [/재물운/g, '지출 흐름'],
+    [/애정운/g, '관계 흐름'],
+    [/성공운/g, '목표 흐름'],
+    [/운세/g, '오늘의 흐름'],
+    [/행운/g, '좋은 흐름'],
+  ];
+  return replacements.reduce((acc, [pattern, next]) => acc.replace(pattern, next), value);
+};
+
 export async function fetchFortuneByDate(date: Date): Promise<FortuneData> {
   const baseUrl = normalizeBaseUrl(API_CONFIG.BASE_URL);
   if (!baseUrl) {
@@ -87,7 +100,7 @@ export async function fetchFortuneByDate(date: Date): Promise<FortuneData> {
     const { payload, rawText } = await readPayload(response);
     if (!response.ok || !payload?.isSuccess) {
       if (response.status === 401 || payload?.code === 401) {
-        console.warn('Unauthorized fortune response', {
+        console.warn('Unauthorized daily response', {
           status: response.status,
           url,
           payload,
@@ -100,15 +113,15 @@ export async function fetchFortuneByDate(date: Date): Promise<FortuneData> {
 
     const fortune = payload.result?.fortune;
     if (!fortune) {
-      throw new ApiError('운세 응답 형식이 올바르지 않습니다.', { status: response.status });
+      throw new ApiError('데이터 응답 형식이 올바르지 않습니다.', { status: response.status });
     }
 
     return {
-      overview: fortune.summary,
-      wealth: fortune.money,
-      love: fortune.love,
-      success: fortune.success,
-      action: fortune.recommendedAction,
+      overview: normalizeInsightText(fortune.summary),
+      wealth: normalizeInsightText(fortune.money),
+      love: normalizeInsightText(fortune.love),
+      success: normalizeInsightText(fortune.success),
+      action: normalizeInsightText(fortune.recommendedAction),
       lunarDate: fortune.lunarDate,
     };
   } catch (error) {

@@ -11,7 +11,7 @@ export interface UserSettings {
 export interface FortuneData {
   // Main daily overview paragraph
   overview: string;
-  // Category fortunes
+  // Category details
   wealth: string;
   love: string;
   success: string;

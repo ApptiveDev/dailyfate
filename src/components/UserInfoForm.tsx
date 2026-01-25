@@ -409,7 +409,9 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
             <Text className="text-3xl font-extrabold text-gray-900 ">
               반가워요!{'\n'}정보를 입력해주세요
             </Text>
-            <Text className="text-lg text-gray-500">정확한 운세 분석을 위해 필요해요.</Text>
+            <Text className="text-lg text-gray-500">
+              맞춤형 기록과 리마인드를 위해 필요해요.
+            </Text>
           </View>
 
           <View className="gap-4">
@@ -448,7 +450,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
           </View>
 
           <View className="gap-4">
-            <Text className="text-xl font-bold text-gray-700">생년월일</Text>
+            <Text className="text-xl font-bold text-gray-700">기준 날짜</Text>
             <Pressable className="rounded-xl bg-gray-100 px-4 py-4" onPress={openBirthDateModal}>
               <View className="flex-row items-center justify-between">
                 <Text className="text-lg font-semibold text-gray-900">{birthSummary}</Text>
@@ -458,7 +460,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
           </View>
 
           <View className="gap-4">
-            <Text className="text-xl font-bold text-gray-700">태어난 시간</Text>
+            <Text className="text-xl font-bold text-gray-700">하루 시작 시간</Text>
             <Pressable className="rounded-xl bg-gray-100 px-4 py-4" onPress={openBirthTimeModal}>
               <View className="flex-row items-center justify-between">
                 <Text className="text-lg font-semibold text-gray-900">{birthTimeSummary}</Text>
@@ -493,7 +495,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
 
           <DatePickerModal
             visible={isBirthDateModalOpen}
-            title="생년월일"
+            title="기준 날짜"
             onClose={() => setIsBirthDateModalOpen(false)}
             year={year}
             month={month}
@@ -520,7 +522,7 @@ const UserInfoForm: React.FC<Props> = ({ onSubmit, initialValues, isSubmitting =
 
           <PickerModal
             visible={isBirthTimeModalOpen}
-            title="태어난 시간"
+            title="하루 시작 시간"
             onClose={() => setIsBirthTimeModalOpen(false)}
           >
             <View className="mb-2 flex-row">

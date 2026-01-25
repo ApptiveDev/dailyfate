@@ -414,7 +414,7 @@ const CalendarPage: React.FC<Props> = ({
                   <View className="items-center">
                     <ActivityIndicator size="small" color="#d1d5db" />
                     <Text className="mt-2 font-serif text-sm text-gray-300">
-                      운세를 읽고 있습니다...
+                      오늘의 기록을 불러오는 중...
                     </Text>
                   </View>
                 ) : fortune ? (
@@ -438,7 +438,7 @@ const CalendarPage: React.FC<Props> = ({
                   </View>
                 ) : (
                   <Text className="text-center font-serif text-sm text-gray-300">
-                    운세 정보가 없습니다.
+                    오늘의 기록이 없습니다.
                   </Text>
                 )}
               </View>
@@ -449,7 +449,7 @@ const CalendarPage: React.FC<Props> = ({
               className="absolute inset-x-0 bottom-20 items-center"
             >
               <Feather name="chevron-down" size={28} color="#d1d5db" />
-              <Text className=" font-wanted-semibold text-gray-500">운세 보러가기</Text>
+              <Text className=" font-wanted-semibold text-gray-500">오늘의 체크인 보기</Text>
             </Animated.View>
           </View>
 
@@ -460,40 +460,40 @@ const CalendarPage: React.FC<Props> = ({
             <View className="mx-auto flex-1 w-full max-w-xl ">
               {fortune ? (
                 <>
-                  <FortuneItem 
-                    icon="dollar-sign" 
-                    label="재물운" 
+                  <InsightItem
+                    icon="credit-card"
+                    label="지출 점검"
                     value={fortune.wealth}
                     iconColor="#d97706"
                     bgColor="#fef3c7"
                   />
-                  <FortuneItem 
-                    icon="heart" 
-                    label="애정운" 
+                  <InsightItem
+                    icon="users"
+                    label="관계 메모"
                     value={fortune.love}
-                    iconColor="#dc2626"
-                    bgColor="#fee2e2"
+                    iconColor="#0f766e"
+                    bgColor="#ccfbf1"
                   />
-                  <FortuneItem 
-                    icon="award" 
-                    label="성공운" 
+                  <InsightItem
+                    icon="target"
+                    label="목표 진행"
                     value={fortune.success}
-                    iconColor="#7c3aed"
-                    bgColor="#ede9fe"
+                    iconColor="#2563eb"
+                    bgColor="#dbeafe"
                   />
-                  <FortuneItem 
-                    icon="zap" 
-                    label="추천 행동" 
+                  <InsightItem
+                    icon="check-circle"
+                    label="오늘의 실천"
                     value={fortune.action}
                     iconColor="#059669"
                     bgColor="#d1fae5"
-                    isLast 
+                    isLast
                   />
                 </>
               ) : (
                 <View className="py-5">
                   <Text className="font-serif text-[15px] text-gray-400">
-                    운세 정보가 없습니다.
+                    오늘의 기록이 없습니다.
                   </Text>
                 </View>
               )}
@@ -505,7 +505,7 @@ const CalendarPage: React.FC<Props> = ({
   );
 };
 
-interface FortuneItemProps {
+interface InsightItemProps {
   icon: React.ComponentProps<typeof Feather>['name'];
   label: string;
   value: string;
@@ -514,7 +514,14 @@ interface FortuneItemProps {
   isLast?: boolean;
 }
 
-const FortuneItem: React.FC<FortuneItemProps> = ({ icon, label, value, iconColor, bgColor, isLast }) => (
+const InsightItem: React.FC<InsightItemProps> = ({
+  icon,
+  label,
+  value,
+  iconColor,
+  bgColor,
+  isLast,
+}) => (
   <View className={`py-4 ${isLast ? '' : 'border-b border-gray-200'}`}>
     <View className="mb-2 flex-row items-center">
       <View 
