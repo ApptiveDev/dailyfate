@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, Pressable, ScrollView } from 'react-native';
+import { Dimensions, Image, Pressable, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MissionData, PhotoEntry } from '@/types/fortune';
@@ -52,6 +52,8 @@ const PhotoDetailPage: React.FC<Props> = ({
   const insets = useSafeAreaInsets();
   const dateInfo = formatDate(photo.date);
 
+  const isDummyPhoto = photo.photoUri.startsWith('dummy://');
+
   return (
     <Box className="flex-1 bg-white">
       {/* Header */}
@@ -95,15 +97,34 @@ const PhotoDetailPage: React.FC<Props> = ({
       >
         {/* Photo */}
         <Box className="mx-6 mt-6">
-          <Center
-            className="rounded-2xl bg-neutral-100"
-            style={{
-              width: SCREEN_WIDTH - 48,
-              height: SCREEN_WIDTH - 48,
-            }}
-          >
-            <Feather name="image" size={48} color="#ccc" />
-          </Center>
+          {isDummyPhoto ? (
+            <Center
+              className="rounded-2xl bg-neutral-100"
+              style={{
+                width: SCREEN_WIDTH - 48,
+                height: SCREEN_WIDTH - 48,
+              }}
+            >
+              <Feather name="image" size={48} color="#ccc" />
+              <Text className="mt-2 text-neutral-400 text-sm">
+                더미 이미지
+              </Text>
+            </Center>
+          ) : (
+            <Box
+              className="rounded-2xl overflow-hidden"
+              style={{
+                width: SCREEN_WIDTH - 48,
+                height: SCREEN_WIDTH - 48,
+              }}
+            >
+              <Image
+                source={{ uri: photo.photoUri }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            </Box>
+          )}
         </Box>
 
         {/* Mission */}

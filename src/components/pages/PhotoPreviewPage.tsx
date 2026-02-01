@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Dimensions,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -34,7 +35,7 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const PhotoPreviewPage: React.FC<Props> = ({
-  photoUri: _photoUri,
+  photoUri,
   mission,
   date,
   onSave,
@@ -47,6 +48,8 @@ const PhotoPreviewPage: React.FC<Props> = ({
 
   const month = date.getMonth();
   const day = date.getDate();
+
+  const isDummyPhoto = photoUri.startsWith('dummy://');
 
   const handleSave = () => {
     if (isSaving) return;
@@ -85,15 +88,34 @@ const PhotoPreviewPage: React.FC<Props> = ({
       >
         {/* Photo Preview */}
         <Box className="mx-6 mt-6">
-          <Center
-            className="rounded-2xl bg-neutral-100"
-            style={{
-              width: SCREEN_WIDTH - 48,
-              height: SCREEN_WIDTH - 48,
-            }}
-          >
-            <Feather name="image" size={48} color="#ccc" />
-          </Center>
+          {isDummyPhoto ? (
+            <Center
+              className="rounded-2xl bg-neutral-100"
+              style={{
+                width: SCREEN_WIDTH - 48,
+                height: SCREEN_WIDTH - 48,
+              }}
+            >
+              <Feather name="image" size={48} color="#ccc" />
+              <Text className="mt-2 text-neutral-400 text-sm">
+                미리보기
+              </Text>
+            </Center>
+          ) : (
+            <Box
+              className="rounded-2xl overflow-hidden"
+              style={{
+                width: SCREEN_WIDTH - 48,
+                height: SCREEN_WIDTH - 48,
+              }}
+            >
+              <Image
+                source={{ uri: photoUri }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            </Box>
+          )}
         </Box>
 
         {/* Mission */}
