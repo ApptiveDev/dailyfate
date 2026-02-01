@@ -1,10 +1,54 @@
-import React, { useMemo } from 'react';
-import { Image, Pressable, ScrollView } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  Modal,
+  Pressable,
+  ScrollView,
+  Switch,
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { PhotoEntry, UserSettings } from '@/types';
-import { Box, Text, HStack, VStack, Center, Heading, Card } from '../ui';
+import { Box, Text, HStack, VStack, Center, Heading, Card, Input } from '../ui';
+
+const CONTACT_EMAIL = 'bluebird.happier@gmail.com';
+const ITEM_HEIGHT = 48;
+const VISIBLE_ITEMS = 5;
+const DEFAULT_NOTIFICATION_TIME = '08:00';
+const NOTIFICATION_MINUTE_STEP = 5;
+
+const pad2 = (value: number) => String(value).padStart(2, '0');
+
+const parseTimeParts = (value: string, fallback: string) => {
+  const [fallbackHour, fallbackMinute] = fallback.split(':');
+  const match = value.match(/(\d{1,2}):(\d{1,2})/);
+  if (!match) return { hour: fallbackHour, minute: fallbackMinute };
+  const hourNumber = Number(match[1]);
+  const minuteNumber = Number(match[2]);
+  const hour = pad2(hourNumber);
+  const minute = pad2(minuteNumber);
+  if (
+    !Number.isFinite(hourNumber) ||
+    !Number.isFinite(minuteNumber) ||
+    hourNumber > 23 ||
+    minuteNumber > 59
+  ) {
+    return { hour: fallbackHour, minute: fallbackMinute };
+  }
+  return { hour, minute };
+};
+
+const normalizeMinuteToStep = (minute: string, step: number) => {
+  const numeric = Number(minute);
+  if (!Number.isFinite(numeric)) return minute;
+  const normalized = Math.floor(numeric / step) * step;
+  const bounded = Math.min(Math.max(normalized, 0), 59);
+  return pad2(bounded);
+};
 
 interface ProfileStats {
   totalPhotos: number;
@@ -16,23 +60,192 @@ interface ProfileStats {
 interface Props {
   userSettings: UserSettings | null;
   photos: PhotoEntry[];
-  onOpenSettings: () => void;
   onSelectPhoto: (photo: PhotoEntry) => void;
+  onSaveSettings: (settings: UserSettings) => Promise<void>;
+  onLogout: () => void;
+  onDeleteAccount: () => void;
+  isSaving?: boolean;
 }
+
+// WheelPicker for time selection
+const WheelPicker: React.FC<{
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+}> = ({ options, value, onChange }) => {
+  const scrollRef = useRef<ScrollView | null>(null);
+  const padding = ((VISIBLE_ITEMS - 1) / 2) * ITEM_HEIGHT;
+
+  useEffect(() => {
+    if (!options.length) return;
+    const index = Math.max(0, options.indexOf(value));
+    scrollRef.current?.scrollTo({ y: index * ITEM_HEIGHT, animated: false });
+  }, [options, value]);
+
+  const handleScrollEnd = (event: { nativeEvent: { contentOffset: { y: number } } }) => {
+    if (!options.length) return;
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const bounded = Math.max(0, Math.min(index, options.length - 1));
+    const nextValue = options[bounded];
+    if (nextValue !== value) onChange(nextValue);
+  };
+
+  return (
+    <Box className="overflow-hidden" style={{ height: ITEM_HEIGHT * VISIBLE_ITEMS }}>
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ITEM_HEIGHT}
+        decelerationRate="fast"
+        onMomentumScrollEnd={handleScrollEnd}
+        onScrollEndDrag={handleScrollEnd}
+        nestedScrollEnabled
+        contentContainerStyle={{ paddingVertical: padding }}
+      >
+        {options.map((option) => {
+          const isSelected = option === value;
+          return (
+            <Center key={option} style={{ height: ITEM_HEIGHT }}>
+              <Text
+                className={`text-2xl font-semibold ${isSelected ? 'text-white' : 'text-neutral-600'}`}
+              >
+                {option}
+              </Text>
+            </Center>
+          );
+        })}
+      </ScrollView>
+      <Box
+        pointerEvents="none"
+        className="absolute left-0 right-0 border-t border-b border-neutral-700"
+        style={{ top: padding, height: ITEM_HEIGHT }}
+      />
+    </Box>
+  );
+};
+
+// Time Picker Modal
+const TimePickerModal: React.FC<{
+  visible: boolean;
+  onClose: () => void;
+  hour: string;
+  minute: string;
+  onChangeHour: (value: string) => void;
+  onChangeMinute: (value: string) => void;
+  hourOptions: string[];
+  minuteOptions: string[];
+}> = ({ visible, onClose, hour, minute, onChangeHour, onChangeMinute, hourOptions, minuteOptions }) => (
+  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Pressable className="flex-1 items-center justify-center bg-black/60" onPress={onClose}>
+      <Pressable className="w-80 rounded-3xl bg-neutral-900 p-6" onPress={(e) => e.stopPropagation()}>
+        <HStack className="justify-between items-center mb-6">
+          <Heading className="text-xl text-white">알림 시간</Heading>
+          <Pressable onPress={onClose} hitSlop={12}>
+            <Feather name="x" size={24} color="#fff" />
+          </Pressable>
+        </HStack>
+
+        <HStack className="mb-4">
+          <Text className="flex-1 text-center text-sm text-neutral-500">시</Text>
+          <Text className="flex-1 text-center text-sm text-neutral-500">분</Text>
+        </HStack>
+
+        <HStack>
+          <Box className="flex-1">
+            <WheelPicker options={hourOptions} value={hour} onChange={onChangeHour} />
+          </Box>
+          <Box className="flex-1">
+            <WheelPicker options={minuteOptions} value={minute} onChange={onChangeMinute} />
+          </Box>
+        </HStack>
+
+        <Pressable
+          onPress={onClose}
+          className="mt-6 py-4 rounded-2xl bg-white items-center"
+        >
+          <Text className="text-base font-semibold text-black">완료</Text>
+        </Pressable>
+      </Pressable>
+    </Pressable>
+  </Modal>
+);
+
+// Nickname Edit Modal
+const NicknameEditModal: React.FC<{
+  visible: boolean;
+  onClose: () => void;
+  nickname: string;
+  onSave: (nickname: string) => void;
+}> = ({ visible, onClose, nickname, onSave }) => {
+  const [value, setValue] = useState(nickname);
+
+  useEffect(() => {
+    if (visible) setValue(nickname);
+  }, [visible, nickname]);
+
+  const handleSave = () => {
+    if (value.trim()) {
+      onSave(value.trim());
+      onClose();
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable className="flex-1 items-center justify-center bg-black/60" onPress={onClose}>
+        <Pressable className="w-80 rounded-3xl bg-white p-6" onPress={(e) => e.stopPropagation()}>
+          <HStack className="justify-between items-center mb-6">
+            <Heading className="text-xl text-black">닉네임 수정</Heading>
+            <Pressable onPress={onClose} hitSlop={12}>
+              <Feather name="x" size={24} color="#000" />
+            </Pressable>
+          </HStack>
+
+          <Input
+            value={value}
+            onChangeText={setValue}
+            placeholder="닉네임을 입력하세요"
+            className="border border-neutral-200 rounded-xl px-4 py-3 text-base"
+            autoFocus
+          />
+
+          <Pressable
+            onPress={handleSave}
+            disabled={!value.trim()}
+            className="mt-6 py-4 rounded-2xl bg-black items-center"
+            style={{ opacity: value.trim() ? 1 : 0.5 }}
+          >
+            <Text className="text-base font-semibold text-white">저장</Text>
+          </Pressable>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+};
 
 const ProfilePage: React.FC<Props> = ({
   userSettings,
   photos,
-  onOpenSettings,
   onSelectPhoto,
+  onSaveSettings,
+  onLogout,
+  onDeleteAccount,
+  isSaving = false,
 }) => {
   const insets = useSafeAreaInsets();
+  const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
+  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+  const [localSettings, setLocalSettings] = useState<UserSettings | null>(userSettings);
+
+  // Sync local settings when userSettings changes
+  useEffect(() => {
+    setLocalSettings(userSettings);
+  }, [userSettings]);
 
   // Calculate profile stats
   const stats: ProfileStats = useMemo(() => {
     const totalPhotos = photos.length;
-
-    // Calculate longest streak (consecutive days with photos)
     const sortedDates = [...new Set(photos.map((p) => p.date))].sort();
     let currentStreak = 0;
     let longestStreak = 0;
@@ -57,11 +270,10 @@ const ProfilePage: React.FC<Props> = ({
     }
     longestStreak = Math.max(longestStreak, currentStreak);
 
-    // Calculate current streak (from today backwards)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     let totalStreak = 0;
-    let checkDate = new Date(today);
+    const checkDate = new Date(today);
 
     while (true) {
       const dateKey = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
@@ -73,7 +285,6 @@ const ProfilePage: React.FC<Props> = ({
       }
     }
 
-    // Calculate how many months since first photo
     const joinedMonths = sortedDates.length > 0
       ? Math.max(1, Math.ceil(
           (today.getTime() - new Date(sortedDates[0]).getTime()) /
@@ -81,12 +292,7 @@ const ProfilePage: React.FC<Props> = ({
         ))
       : 0;
 
-    return {
-      totalPhotos,
-      totalStreak,
-      longestStreak,
-      joinedMonths,
-    };
+    return { totalPhotos, totalStreak, longestStreak, joinedMonths };
   }, [photos]);
 
   // Get recent photos (last 6)
@@ -96,7 +302,74 @@ const ProfilePage: React.FC<Props> = ({
       .slice(0, 6);
   }, [photos]);
 
-  const nickname = userSettings?.nickname || '사용자';
+  // Time picker options
+  const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => pad2(i)), []);
+  const minuteOptions = useMemo(
+    () => Array.from({ length: 60 / NOTIFICATION_MINUTE_STEP }, (_, i) => pad2(i * NOTIFICATION_MINUTE_STEP)),
+    []
+  );
+
+  const { hour: notifyHour, minute: notifyMinute } = useMemo(() => {
+    const parsed = parseTimeParts(
+      localSettings?.notificationTime || DEFAULT_NOTIFICATION_TIME,
+      DEFAULT_NOTIFICATION_TIME
+    );
+    return {
+      hour: parsed.hour,
+      minute: normalizeMinuteToStep(parsed.minute, NOTIFICATION_MINUTE_STEP),
+    };
+  }, [localSettings?.notificationTime]);
+
+  const nickname = localSettings?.nickname || '사용자';
+
+  // Handlers
+  const updateAndSave = async (patch: Partial<UserSettings>) => {
+    if (!localSettings) return;
+    const updated = { ...localSettings, ...patch };
+    setLocalSettings(updated);
+    try {
+      await onSaveSettings(updated);
+    } catch {
+      // Revert on error
+      setLocalSettings(localSettings);
+    }
+  };
+
+  const handleNicknameSave = (newNickname: string) => {
+    void updateAndSave({ nickname: newNickname });
+  };
+
+  const handleNotificationToggle = (enabled: boolean) => {
+    void updateAndSave({ notificationEnabled: enabled });
+  };
+
+  const handleTimeChange = (hour: string, minute: string) => {
+    void updateAndSave({ notificationTime: `${hour}:${minute}` });
+  };
+
+  const handleLogout = () => {
+    Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      { text: '로그아웃', style: 'destructive', onPress: onLogout },
+    ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      '회원탈퇴',
+      '정말 탈퇴하시겠습니까?\n모든 데이터가 삭제되며 복구할 수 없습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        { text: '탈퇴', style: 'destructive', onPress: onDeleteAccount },
+      ]
+    );
+  };
+
+  const handleContactEmail = () => {
+    Linking.openURL(`mailto:${CONTACT_EMAIL}`).catch(() => {
+      Alert.alert('이메일 앱을 열 수 없습니다', `문의: ${CONTACT_EMAIL}`);
+    });
+  };
 
   return (
     <Box className="flex-1 bg-white">
@@ -113,25 +386,28 @@ const ProfilePage: React.FC<Props> = ({
             <Heading className="text-xl text-white font-wanted-bold">
               프로필
             </Heading>
-            <Pressable onPress={onOpenSettings} hitSlop={12}>
-              <Feather name="settings" size={22} color="#fff" />
-            </Pressable>
+            {isSaving && <ActivityIndicator size="small" color="#fff" />}
           </HStack>
 
           {/* Profile Info */}
-          <VStack className="items-center">
-            <Center className="w-20 h-20 rounded-full bg-neutral-800 mb-4">
-              <Feather name="user" size={32} color="#fff" />
-            </Center>
-            <Text className="text-white text-xl font-wanted-bold mb-1">
-              {nickname}
-            </Text>
-            <Text className="text-neutral-400 text-sm font-wanted-regular">
-              {stats.joinedMonths > 0
-                ? `${stats.joinedMonths}개월째 기록 중`
-                : '오늘부터 기록을 시작해보세요'}
-            </Text>
-          </VStack>
+          <Pressable onPress={() => setIsNicknameModalOpen(true)}>
+            <VStack className="items-center">
+              <Center className="w-20 h-20 rounded-full bg-neutral-800 mb-4">
+                <Feather name="user" size={32} color="#fff" />
+              </Center>
+              <HStack className="items-center" space="xs">
+                <Text className="text-white text-xl font-wanted-bold">
+                  {nickname}
+                </Text>
+                <Feather name="edit-2" size={14} color="#666" />
+              </HStack>
+              <Text className="text-neutral-400 text-sm font-wanted-regular mt-1">
+                {stats.joinedMonths > 0
+                  ? `${stats.joinedMonths}개월째 기록 중`
+                  : '오늘부터 기록을 시작해보세요'}
+              </Text>
+            </VStack>
+          </Pressable>
         </Box>
 
         {/* Stats Cards */}
@@ -225,23 +501,18 @@ const ProfilePage: React.FC<Props> = ({
               <Text className="text-neutral-400 text-sm mt-3 font-wanted-regular">
                 아직 기록된 사진이 없습니다
               </Text>
-              <Text className="text-neutral-300 text-xs mt-1 font-wanted-regular">
-                오늘의 미션을 완료해보세요
-              </Text>
             </Center>
           )}
         </Box>
 
-        {/* Quick Actions */}
+        {/* Notification Settings */}
         <Box className="px-6 mt-8">
           <Text className="text-black text-lg font-wanted-bold mb-4">
-            빠른 설정
+            알림 설정
           </Text>
 
-          <Pressable
-            onPress={onOpenSettings}
-            className="bg-neutral-50 rounded-2xl p-4 mb-3"
-          >
+          {/* Notification Toggle */}
+          <Box className="bg-neutral-50 rounded-2xl p-4 mb-3">
             <HStack className="items-center justify-between">
               <HStack className="items-center" space="md">
                 <Center className="w-10 h-10 rounded-full bg-white">
@@ -249,40 +520,142 @@ const ProfilePage: React.FC<Props> = ({
                 </Center>
                 <VStack>
                   <Text className="text-black font-wanted-semibold">
-                    알림 설정
+                    미션 알림
                   </Text>
                   <Text className="text-neutral-400 text-xs font-wanted-regular">
-                    미션 알림 시간을 설정하세요
+                    매일 미션 알림을 받습니다
                   </Text>
                 </VStack>
               </HStack>
-              <Feather name="chevron-right" size={20} color="#a3a3a3" />
+              <Switch
+                value={localSettings?.notificationEnabled ?? false}
+                onValueChange={handleNotificationToggle}
+                trackColor={{ false: '#e5e5e5', true: '#000' }}
+                thumbColor="#fff"
+              />
             </HStack>
-          </Pressable>
+          </Box>
+
+          {/* Notification Time */}
+          {localSettings?.notificationEnabled && (
+            <Pressable
+              onPress={() => setIsTimePickerOpen(true)}
+              className="bg-neutral-50 rounded-2xl p-4"
+            >
+              <HStack className="items-center justify-between">
+                <HStack className="items-center" space="md">
+                  <Center className="w-10 h-10 rounded-full bg-white">
+                    <Feather name="clock" size={18} color="#000" />
+                  </Center>
+                  <VStack>
+                    <Text className="text-black font-wanted-semibold">
+                      알림 시간
+                    </Text>
+                    <Text className="text-neutral-400 text-xs font-wanted-regular">
+                      설정한 시간에 알림을 보내드려요
+                    </Text>
+                  </VStack>
+                </HStack>
+                <HStack className="items-center" space="xs">
+                  <Text className="text-black text-lg font-wanted-bold">
+                    {notifyHour}:{notifyMinute}
+                  </Text>
+                  <Feather name="chevron-right" size={20} color="#a3a3a3" />
+                </HStack>
+              </HStack>
+            </Pressable>
+          )}
+        </Box>
+
+        {/* Support Section */}
+        <Box className="px-6 mt-8">
+          <Text className="text-black text-lg font-wanted-bold mb-4">
+            고객 지원
+          </Text>
 
           <Pressable
-            onPress={onOpenSettings}
+            onPress={handleContactEmail}
             className="bg-neutral-50 rounded-2xl p-4"
           >
             <HStack className="items-center justify-between">
               <HStack className="items-center" space="md">
                 <Center className="w-10 h-10 rounded-full bg-white">
-                  <Feather name="user" size={18} color="#000" />
+                  <Feather name="mail" size={18} color="#000" />
                 </Center>
                 <VStack>
                   <Text className="text-black font-wanted-semibold">
-                    프로필 수정
+                    문의하기
                   </Text>
                   <Text className="text-neutral-400 text-xs font-wanted-regular">
-                    닉네임 및 정보를 수정하세요
+                    {CONTACT_EMAIL}
                   </Text>
                 </VStack>
               </HStack>
-              <Feather name="chevron-right" size={20} color="#a3a3a3" />
+              <Feather name="external-link" size={18} color="#a3a3a3" />
             </HStack>
           </Pressable>
         </Box>
+
+        {/* Account Section */}
+        <Box className="px-6 mt-8">
+          <Text className="text-black text-lg font-wanted-bold mb-4">
+            계정
+          </Text>
+
+          <Pressable
+            onPress={handleLogout}
+            className="bg-neutral-50 rounded-2xl p-4 mb-3"
+          >
+            <HStack className="items-center" space="md">
+              <Center className="w-10 h-10 rounded-full bg-red-50">
+                <Feather name="log-out" size={18} color="#ef4444" />
+              </Center>
+              <Text className="text-red-500 font-wanted-semibold">
+                로그아웃
+              </Text>
+            </HStack>
+          </Pressable>
+
+          <Pressable
+            onPress={handleDeleteAccount}
+            className="bg-neutral-50 rounded-2xl p-4"
+          >
+            <HStack className="items-center" space="md">
+              <Center className="w-10 h-10 rounded-full bg-red-50">
+                <Feather name="user-x" size={18} color="#ef4444" />
+              </Center>
+              <Text className="text-red-500 font-wanted-semibold">
+                회원탈퇴
+              </Text>
+            </HStack>
+          </Pressable>
+        </Box>
+
+        {/* App Info */}
+        <Center className="mt-12">
+          <Text className="text-neutral-300 text-xs">DailyFate v1.0.0</Text>
+        </Center>
       </ScrollView>
+
+      {/* Nickname Edit Modal */}
+      <NicknameEditModal
+        visible={isNicknameModalOpen}
+        onClose={() => setIsNicknameModalOpen(false)}
+        nickname={nickname}
+        onSave={handleNicknameSave}
+      />
+
+      {/* Time Picker Modal */}
+      <TimePickerModal
+        visible={isTimePickerOpen}
+        onClose={() => setIsTimePickerOpen(false)}
+        hour={notifyHour}
+        minute={notifyMinute}
+        onChangeHour={(h) => handleTimeChange(h, notifyMinute)}
+        onChangeMinute={(m) => handleTimeChange(notifyHour, m)}
+        hourOptions={hourOptions}
+        minuteOptions={minuteOptions}
+      />
     </Box>
   );
 };

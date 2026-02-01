@@ -231,8 +231,16 @@ export default function Home() {
         <ProfilePage
           userSettings={bootstrap.userSettings}
           photos={photos}
-          onOpenSettings={handleOpenSettings}
           onSelectPhoto={handleSelectPhoto}
+          onSaveSettings={async (settings) => {
+            await bootstrap.persistUserSettings(settings);
+          }}
+          onLogout={bootstrap.requireLogin}
+          onDeleteAccount={() => {
+            // TODO: 실제 회원탈퇴 API 연동
+            Alert.alert('회원탈퇴', '회원탈퇴 기능은 준비 중입니다.');
+          }}
+          isSaving={bootstrap.profileSaving}
         />
       )}
 
