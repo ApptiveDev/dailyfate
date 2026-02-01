@@ -340,9 +340,8 @@ const CalendarPage: React.FC<Props> = ({
                           width: cellSize - 4,
                           height: cellSize - 4,
                           borderRadius: 12,
-                          backgroundColor: isToday ? '#FF5C00' : (photo ? '#1A1A1A' : 'transparent'),
-                          borderWidth: !photo && !isToday ? 1 : 0,
-                          borderColor: '#F5F5F5',
+                          backgroundColor: isToday ? '#FF5C00' : (photo ? '#1A1A1A' : '#F0F0F0'),
+                          borderWidth: 0,
                         }}
                       />
                     ) : null}
@@ -373,8 +372,8 @@ const CalendarPage: React.FC<Props> = ({
 
         {/* Footer Text */}
         <Center className="mt-20">
-          <Text className="text-[10px] font-wanted-medium text-neutral-400 tracking-[3px] uppercase">
-            LESS BUT BETTER
+          <Text className="text-[10px] font-wanted-medium text-neutral-400 tracking-[3px]">
+            오늘을 기록해 보세요!
           </Text>
         </Center>
       </ScrollView>

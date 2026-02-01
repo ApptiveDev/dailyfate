@@ -56,7 +56,7 @@ const TodayMissionPage: React.FC<Props> = ({
       >
         {/* Header */}
         <HStack className="items-center justify-between pt-4">
-          <Feather name="command" size={28} color="#FFFFFF" />
+          <Box style={{ width: 28 }} />
           <Box style={{ width: 24 }} />
         </HStack>
 
@@ -65,13 +65,16 @@ const TodayMissionPage: React.FC<Props> = ({
           {loading ? (
             <Text className="text-2xl text-neutral-500 font-wanted-regular">Loading...</Text>
           ) : (
-            <VStack space="xs">
-              <Text className="text-[32px] font-wanted-bold text-brand-orange leading-tight">
+            <VStack space="md">
+              <Text className="text-[32px] font-wanted-bold text-white leading-tight">
                 {month}월 {day}일 ({WEEKDAY_KR[weekday]})
               </Text>
-              <Text className="text-[42px] font-wanted-bold text-white leading-[48px]">
-                {mission?.theme || 'Capture your\nDaily Life'}
-              </Text>
+              <HStack space="md" className="items-stretch">
+                <Box className="w-1 bg-white rounded-full" />
+                <Text className="text-[35px] font-wanted-bold text-white leading-[48px] flex-1">
+                  {mission?.theme || 'Capture your\nDaily Life'}
+                </Text>
+              </HStack>
             </VStack>
           )}
         </Box>

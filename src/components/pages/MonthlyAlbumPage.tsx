@@ -16,7 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import type { MonthlyStats, PhotoEntry } from '@/types/fortune';
-import { Box, Text, VStack, Heading } from '../ui';
+import { Box, Text, VStack, Heading, HStack } from '../ui';
 
 interface Props {
   year: number;
@@ -39,14 +39,14 @@ interface MonthlyStatData {
 
 const MONTH_COLORS_GRADIENT = Array.from({ length: 12 }, (_, i) => {
   // 1월(흰색) -> 12월(검정) 그라데이션 계산
-  // 255 (white) to 20 (dark gray/black)
-  const value = Math.floor(255 - (i * (235 / 11)));
+  // 255 (white) to 28 (dark gray)
+  const value = Math.floor(255 - (i * (227 / 11)));
   const hex = value.toString(16).padStart(2, '0');
   const color = `#${hex}${hex}${hex}`;
   
   // 배경색에 따른 텍스트 색상 결정 (밝으면 검정, 어두우면 흰색)
-  const textColor = value > 128 ? '#000000' : '#FFFFFF';
-  const subTextColor = value > 128 ? '#666666' : '#A3A3A3';
+  const textColor = value > 160 ? '#000000' : '#FFFFFF';
+  const subTextColor = value > 160 ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.5)';
   
   return { bg: color, text: textColor, sub: subTextColor };
 });
@@ -171,32 +171,39 @@ const WalletCard: React.FC<WalletCardProps & { insets: any }> = ({
           accessibilityLabel={`${item.year}년 ${item.month}월 통계 카드`}
           accessibilityRole="button"
         >
+          {/* Card Header */}
           <View style={styles.cardHeader}>
-            <View style={styles.headerLeft}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>
-                {item.year} {MONTH_NAMES_KR[item.month - 1]}
-              </Text>
-            </View>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>
+              {item.year} {MONTH_NAMES_KR[item.month - 1]}
+            </Text>
+            <Feather 
+              name={isExpanded ? "chevron-up" : "chevron-down"} 
+              size={20} 
+              color={colors.sub} 
+            />
           </View>
 
+          {/* Card Body */}
           <View style={styles.cardBody}>
-            <View style={styles.mainInfo}>
+            <View>
+              <Text style={[styles.rateLabel, { color: colors.sub }]}>
+                성공률
+              </Text>
               <Text style={[styles.rateValue, { color: colors.text }]}>
                 {String(item.successRate)}%
-              </Text>
-              <Text style={[styles.rateLabel, { color: '#FF5C00' }]}>
-                성공률
               </Text>
             </View>
 
             <View style={styles.footerInfo}>
-              <View style={styles.streakInfo}>
-                <Text style={[styles.streakValue, { color: colors.text }]}>
-                  {item.streakDays}일
-                </Text>
+              <View>
                 <Text style={[styles.streakLabel, { color: colors.sub }]}>
                   연속 달성
                 </Text>
+                <HStack className="items-center" space="xs">
+                  <Text style={[styles.streakValue, { color: colors.text }]}>
+                    {item.streakDays}일
+                  </Text>
+                </HStack>
               </View>
             </View>
           </View>
@@ -205,18 +212,22 @@ const WalletCard: React.FC<WalletCardProps & { insets: any }> = ({
         {/* 확장 시 상세 보기 버튼 — 별도 Pressable이라 카드 탭과 겹치지 않음 */}
         {isExpanded && (
           <Pressable
-            style={[styles.detailButton, { borderColor: '#FF5C00' }]}
+            style={[styles.detailButton, { backgroundColor: colors.text === '#000000' ? '#000000' : '#FFFFFF' }]}
             onPress={onDetail}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityLabel="월별 상세 보기"
-            accessibilityRole="button"
+            hitSlop={12}
           >
-            <Text style={[styles.detailButtonText, { color: colors.text }]}>상세 보기</Text>
-            <Feather name="chevron-right" size={16} color="#FF5C00" />
+            <Text style={[styles.detailButtonText, { color: colors.text === '#000000' ? '#FFFFFF' : '#000000' }]}>
+              앨범 보기
+            </Text>
+            <Feather 
+              name="arrow-right" 
+              size={14} 
+              color={colors.text === '#000000' ? '#FFFFFF' : '#000000'} 
+            />
           </Pressable>
         )}
 
-        <View style={[styles.cardBorder, { borderColor: 'rgba(0,0,0,0.08)' }]} />
+        <View style={[styles.cardBorder, { borderColor: colors.text === '#000000' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.1)' }]} />
       </View>
     </Animated.View>
   );
@@ -376,15 +387,13 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     height: CARD_HEIGHT,
-    borderRadius: 24,
+    borderRadius: 24, // 가이드라인 lg(24px) 반영
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
     shadowRadius: 16,
-    elevation: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)', // 어두운 배경에 맞는 테두리
+    elevation: 8,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -468,7 +477,7 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   backdrop: {
-    backgroundColor: 'transparent', // 배경 어둡기 완전 제거
+    backgroundColor: 'transparent',
     zIndex: 10, 
   },
 });
