@@ -83,13 +83,13 @@ const TodayMissionPage: React.FC<Props> = ({
           height: bottomHeight,
           backgroundColor: '#FFFFFF'
         }}
-        className="px-8 pt-12"
+        className="px-8"
       >
-        <Text className="text-neutral-300 font-wanted-bold text-xs tracking-[2px] uppercase mb-8">
+        <Text className="text-neutral-300 font-wanted-bold text-xs tracking-[2px] uppercase mt-8">
           {todayPhoto ? 'COMPLETED' : 'MISSION'}
         </Text>
 
-        <Center className="flex-1 pb-20">
+        <Center className="flex-1" style={{ marginBottom: 100 }}>
           {todayPhoto ? (
             <Pressable onPress={onViewPhoto}>
               <Box

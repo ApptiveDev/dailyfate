@@ -28,38 +28,36 @@ const BottomTabBar: React.FC<Props> = ({ activeTab, onTabPress }) => {
 
   return (
     <Box
-      className="absolute bottom-0 left-0 right-0 items-center"
-      style={{ paddingBottom: insets.bottom + 16 }}
+      className="absolute bottom-0 left-0 right-0 bg-black"
+      style={{ paddingBottom: insets.bottom }}
     >
-      {/* Pill-shaped Tab Bar */}
-      <Box className="bg-black rounded-full px-2 py-2">
-        <HStack space="xs">
-          {TABS.map((tab) => {
-            const isActive = activeTab === tab.key;
-            return (
-              <Pressable
-                key={tab.key}
-                onPress={() => onTabPress(tab.key)}
+      <HStack className="justify-around py-3">
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <Pressable
+              key={tab.key}
+              onPress={() => onTabPress(tab.key)}
+              className="flex-1 items-center"
+            >
+              <Center
+                className="rounded-full"
+                style={{
+                  width: 44,
+                  height: 44,
+                  backgroundColor: isActive ? '#fff' : 'transparent',
+                }}
               >
-                <Center
-                  className="rounded-full"
-                  style={{
-                    width: 48,
-                    height: 44,
-                    backgroundColor: isActive ? '#fff' : 'transparent',
-                  }}
-                >
-                  <Feather
-                    name={tab.icon}
-                    size={20}
-                    color={isActive ? '#000' : '#666'}
-                  />
-                </Center>
-              </Pressable>
-            );
-          })}
-        </HStack>
-      </Box>
+                <Feather
+                  name={tab.icon}
+                  size={20}
+                  color={isActive ? '#000' : '#666'}
+                />
+              </Center>
+            </Pressable>
+          );
+        })}
+      </HStack>
     </Box>
   );
 };
