@@ -6,9 +6,12 @@ import { PhotoEntry } from '@/types';
 import {
   TodayMissionPage,
   MonthlyAlbumPage,
+  CalendarPage,
   CameraPage,
   PhotoPreviewPage,
   PhotoDetailPage,
+  ProfilePage,
+  MonthlyAlbumDetailPage,
   BottomTabBar,
   Onboarding,
   LoginScreen,
@@ -38,10 +41,13 @@ export default function Home() {
 
   // Providers
   const { getMissionByKey } = useMission();
-  const { getPhotosByMonth } = usePhotos();
+  const { photos, getPhotosByMonth } = usePhotos();
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('today');
+
+  // Album detail modal state
+  const [showAlbumDetail, setShowAlbumDetail] = useState(false);
 
   // Hide header
   useLayoutEffect(() => {
@@ -60,23 +66,22 @@ export default function Home() {
     modals.closeModal('camera');
   }, [modals]);
 
-  const handleCapture = useCallback(() => {
-    // 더미: 촬영된 것처럼 처리
-    photoManagement.capturePhoto('dummy://captured.jpg');
+  const handleCapture = useCallback((uri: string) => {
+    photoManagement.capturePhoto(uri);
     modals.closeModal('camera');
     modals.openModal('preview');
   }, [photoManagement, modals]);
 
-  const handleOpenGallery = useCallback(() => {
-    // 더미: 갤러리에서 선택된 것처럼 처리
-    photoManagement.capturePhoto('dummy://gallery.jpg');
+  const handleOpenGallery = useCallback((uri: string) => {
+    photoManagement.capturePhoto(uri);
+    modals.closeModal('camera');
     modals.openModal('preview');
   }, [photoManagement, modals]);
 
   const handleSavePhoto = useCallback((caption: string) => {
-    void photoManagement.savePhoto(caption, todayMission.todayMission);
+    void photoManagement.savePhoto(caption, todayMission.todayMission, todayMission.currentDate);
     modals.closeModal('preview');
-  }, [photoManagement, todayMission.todayMission, modals]);
+  }, [photoManagement, todayMission.todayMission, todayMission.currentDate, modals]);
 
   const handleRetake = useCallback(() => {
     modals.closeModal('preview');
@@ -121,6 +126,20 @@ export default function Home() {
   const handleCloseSettings = useCallback(() => {
     modals.closeModal('settings');
   }, [modals]);
+
+  const handleCreateAlbum = useCallback(() => {
+    setShowAlbumDetail(true);
+  }, []);
+
+  const handleCloseAlbumDetail = useCallback(() => {
+    setShowAlbumDetail(false);
+  }, []);
+
+  // Navigate to specific month from MonthlyAlbumPage
+  const handleNavigateToCalendar = useCallback((year: number, month: number) => {
+    monthlyAlbum.goToMonth(year, month);
+    setActiveTab('calendar');
+  }, [monthlyAlbum]);
 
   // ===== Rendering =====
 
@@ -172,9 +191,24 @@ export default function Home() {
           stats={todayMission.monthlyStats}
           loading={false}
           onOpenCamera={handleOpenCamera}
-          onOpenGallery={handleOpenGallery}
+          onOpenGallery={() => modals.openModal('camera')}
           onOpenSettings={handleOpenSettings}
           onViewPhoto={handleViewTodayPhoto}
+        />
+      )}
+
+      {activeTab === 'calendar' && (
+        <CalendarPage
+          year={monthlyAlbum.year}
+          month={monthlyAlbum.month}
+          photos={monthlyPhotos}
+          stats={monthlyAlbum.stats}
+          onPrevMonth={monthlyAlbum.goToPrevMonth}
+          onNextMonth={monthlyAlbum.goToNextMonth}
+          onSelectPhoto={handleSelectPhoto}
+          onSelectEmptyDay={handleSelectEmptyDay}
+          onOpenSettings={handleOpenSettings}
+          onCreateAlbum={handleCreateAlbum}
         />
       )}
 
@@ -189,13 +223,17 @@ export default function Home() {
           onSelectPhoto={handleSelectPhoto}
           onSelectEmptyDay={handleSelectEmptyDay}
           onOpenSettings={handleOpenSettings}
+          onSelectMonth={handleNavigateToCalendar}
         />
       )}
 
       {activeTab === 'profile' && (
-        <View className="flex-1 items-center justify-center">
-          {/* 프로필/내 기록 탭 - 추후 구현 */}
-        </View>
+        <ProfilePage
+          userSettings={bootstrap.userSettings}
+          photos={photos}
+          onOpenSettings={handleOpenSettings}
+          onSelectPhoto={handleSelectPhoto}
+        />
       )}
 
       {/* Bottom Tab Bar */}
@@ -223,10 +261,7 @@ export default function Home() {
           onCapture={handleCapture}
           onClose={handleCloseCamera}
           onFlipCamera={() => {}}
-          onOpenGallery={() => {
-            handleCloseCamera();
-            handleOpenGallery();
-          }}
+          onOpenGallery={handleOpenGallery}
         />
       </Modal>
 
@@ -260,6 +295,21 @@ export default function Home() {
             onShare={handleSharePhoto}
           />
         )}
+      </Modal>
+
+      {/* Monthly Album Detail Modal */}
+      <Modal visible={showAlbumDetail} animationType="slide">
+        <MonthlyAlbumDetailPage
+          year={monthlyAlbum.year}
+          month={monthlyAlbum.month}
+          photos={monthlyPhotos}
+          stats={monthlyAlbum.stats}
+          onClose={handleCloseAlbumDetail}
+          onSelectPhoto={(photo) => {
+            handleCloseAlbumDetail();
+            handleSelectPhoto(photo);
+          }}
+        />
       </Modal>
     </View>
   );

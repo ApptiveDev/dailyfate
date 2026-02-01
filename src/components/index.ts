@@ -8,6 +8,8 @@ export {
   CameraPage,
   PhotoDetailPage,
   PhotoPreviewPage,
+  ProfilePage,
+  MonthlyAlbumDetailPage,
 } from './pages';
 
 // 공통 컴포넌트
