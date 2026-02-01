@@ -1,0 +1,44 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background (Optional for sticker feel, but requested as 'only drawing') -->
+  <!-- Woman Figure -->
+  <g transform="translate(100, 100)">
+    <!-- Body/Shirt -->
+    <path d="M120 350 C120 300 130 250 160 210 L240 210 C270 250 280 300 280 350" fill="none" stroke="black" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Face/Head -->
+    <path d="M160 140 C160 90 180 70 200 70 C220 70 240 90 240 140 C240 170 225 190 200 190 C175 190 160 170 160 140" fill="white" stroke="black" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Hair (Minimalist Bob) -->
+    <path d="M155 140 C155 80 175 60 200 60 C225 60 245 80 245 140 L250 160 L150 160 Z" fill="black" stroke="black" stroke-width="2"/>
+    
+    <!-- Eyes (Simple dots) -->
+    <circle cx="185" cy="135" r="4" fill="black"/>
+    <circle cx="215" cy="135" r="4" fill="black"/>
+    
+    <!-- Small Smile/Mouth -->
+    <path d="M195 160 Q200 165 205 160" fill="none" stroke="black" stroke-width="3" stroke-linecap="round"/>
+
+    <!-- Arms & Camera -->
+    <g transform="translate(0, -10)">
+      <!-- Left Arm -->
+      <path d="M150 240 C170 210 180 200 190 195" fill="none" stroke="black" stroke-width="8" stroke-linecap="round"/>
+      <!-- Right Arm -->
+      <path d="M250 240 C230 210 220 200 210 195" fill="none" stroke="black" stroke-width="8" stroke-linecap="round"/>
+      
+      <!-- Camera -->
+      <rect x="180" y="180" width="40" height="28" rx="6" fill="white" stroke="black" stroke-width="6"/>
+      <circle cx="200" cy="194" r="8" fill="white" stroke="black" stroke-width="4"/>
+      <rect x="210" y="176" width="6" height="4" fill="black"/>
+    </g>
+  </g>
+
+  <!-- Cloud (Floating in front/side) -->
+  <g transform="translate(320, 120)">
+    <path d="M40 20 C20 20 10 35 10 50 C10 65 25 75 40 75 L80 75 C100 75 110 60 110 45 C110 30 95 20 80 20 C75 10 60 5 50 5 C40 5 35 10 35 15" fill="none" stroke="black" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  
+  <!-- Subtle details to match the hand-drawn feel -->
+  <style>
+    path { vector-effect: non-scaling-stroke; }
+  </style>
+</svg>

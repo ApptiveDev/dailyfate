@@ -1,7 +1,19 @@
-import React, { useRef, useEffect } from 'react';
-import { Dimensions, Pressable, ScrollView } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Pressable, Dimensions, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+  SharedValue,
+} from 'react-native-reanimated';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from 'react-native-gesture-handler';
 import { MonthlyStats, PhotoEntry } from '../types/fortune';
 import {
   Box,
@@ -9,8 +21,6 @@ import {
   Heading,
   VStack,
   HStack,
-  Center,
-  Card,
 } from './ui';
 
 interface Props {
@@ -25,242 +35,341 @@ interface Props {
   onOpenSettings: () => void;
 }
 
+// 월별 색상 테마 (무채색)
+const MONTH_COLORS = [
+  { bg: '#FFFFFF', text: '#000000' }, // January
+  { bg: '#F5F5F5', text: '#000000' }, // February
+  { bg: '#EEEEEE', text: '#000000' }, // March
+  { bg: '#E0E0E0', text: '#000000' }, // April
+  { bg: '#D6D6D6', text: '#000000' }, // May
+  { bg: '#CCCCCC', text: '#000000' }, // June
+  { bg: '#C2C2C2', text: '#000000' }, // July
+  { bg: '#B8B8B8', text: '#000000' }, // August
+  { bg: '#ADADAD', text: '#000000' }, // September
+  { bg: '#A3A3A3', text: '#000000' }, // October
+  { bg: '#999999', text: '#FFFFFF' }, // November
+  { bg: '#8F8F8F', text: '#FFFFFF' }, // December
+];
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_WIDTH = SCREEN_WIDTH - 40;
+const CARD_HEIGHT = 200;
+const COLLAPSED_CARD_HEIGHT = 70;
+const SWIPE_THRESHOLD = 50; // 스와이프 임계값
+
+const springConfig = {
+  damping: 20,
+  stiffness: 200,
+  mass: 0.8,
+};
+
+interface CardProps {
+  monthNum: number;
+  index: number;
+  photoCount: number;
+  daysInMonth: number;
+  completionRate: number;
+  color: { bg: string; text: string };
+  selectedIndex: number;
+  dragOffset: SharedValue<number>;
+  onTap: (index: number) => void;
+}
+
+const Card: React.FC<CardProps> = ({
+  monthNum,
+  index,
+  photoCount,
+  daysInMonth,
+  completionRate,
+  color,
+  selectedIndex,
+  dragOffset,
+  onTap,
+}) => {
+  // 탭 제스처
+  const tapGesture = Gesture.Tap()
+    .onEnd(() => {
+      'worklet';
+      runOnJS(onTap)(index);
+    });
+
+  // 애니메이션 스타일
+  const animatedStyle = useAnimatedStyle(() => {
+    'worklet';
+
+    // 기본 위치 계산
+    let basePosition = 0;
+    if (index < selectedIndex) {
+      basePosition = index * COLLAPSED_CARD_HEIGHT;
+    } else if (index === selectedIndex) {
+      basePosition = selectedIndex * COLLAPSED_CARD_HEIGHT;
+    } else {
+      basePosition = selectedIndex * COLLAPSED_CARD_HEIGHT + CARD_HEIGHT + (index - selectedIndex - 1) * COLLAPSED_CARD_HEIGHT;
+    }
+
+    // 드래그 오프셋 적용 (선택된 카드 위의 카드들은 더 많이 움직임)
+    let offsetMultiplier = 1;
+    if (index > selectedIndex) {
+      offsetMultiplier = 1.5;
+    } else if (index < selectedIndex) {
+      offsetMultiplier = 0.5;
+    }
+
+    const targetBottom = basePosition + (dragOffset.value * offsetMultiplier);
+
+    return {
+      position: 'absolute' as const,
+      left: 20,
+      bottom: withSpring(targetBottom, springConfig),
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+      zIndex: index + 1,
+    };
+  }, [selectedIndex, index]);
+
+  return (
+    <GestureDetector gesture={tapGesture}>
+      <Animated.View style={animatedStyle}>
+        <Box
+          style={[
+            styles.card,
+            { backgroundColor: color.bg },
+          ]}
+        >
+          {/* 상단 헤더 영역 */}
+          <HStack className="items-center justify-between" style={styles.cardHeader}>
+            <Text style={[styles.monthName, { color: color.text }]}>
+              {MONTH_NAMES[monthNum - 1]}
+            </Text>
+            <HStack className="items-end">
+              <Text style={[styles.percentSymbol, { color: color.text }]}>
+                %
+              </Text>
+              <Text style={[styles.percentValue, { color: color.text }]}>
+                {completionRate}
+              </Text>
+            </HStack>
+          </HStack>
+
+          {/* 하단 상세 영역 */}
+          <VStack className="flex-1 justify-between" style={styles.cardContent}>
+            <Text style={[styles.recordText, { color: color.text }]}>
+              {photoCount > 0 ? `${photoCount}개의 기록` : '아직 기록이 없어요'}
+            </Text>
+            <HStack style={styles.statsRow}>
+              <VStack>
+                <Text style={[styles.statsLabel, { color: color.text }]}>
+                  완료
+                </Text>
+                <Text style={[styles.statsValue, { color: color.text }]}>
+                  {photoCount}일
+                </Text>
+              </VStack>
+              <VStack>
+                <Text style={[styles.statsLabel, { color: color.text }]}>
+                  목표
+                </Text>
+                <Text style={[styles.statsValue, { color: color.text }]}>
+                  {daysInMonth}일
+                </Text>
+              </VStack>
+            </HStack>
+          </VStack>
+        </Box>
+      </Animated.View>
+    </GestureDetector>
+  );
+};
+
 const MonthlyAlbumPage: React.FC<Props> = ({
   year,
   month,
   photos,
-  stats,
   onPrevMonth,
   onNextMonth,
-  onSelectPhoto,
-  onSelectEmptyDay,
   onOpenSettings,
 }) => {
   const insets = useSafeAreaInsets();
-  const monthScrollRef = useRef<ScrollView>(null);
-  const today = new Date();
-  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
-  const todayDate = today.getDate();
 
-  const MONTH_NAMES = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-  const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  // 더미데이터 테스트용: 7월까지 표시
+  const maxSelectableMonth = 7;
 
-  const SCREEN_WIDTH = Dimensions.get('window').width;
-  const GRID_GAP = 6;
+  // 상태 관리
+  const [selectedIndex, setSelectedIndex] = useState(month - 1);
+  const dragOffset = useSharedValue(0);
 
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const firstDay = new Date(year, month - 1, 1).getDay();
-
-  const photosByDate: Record<number, PhotoEntry> = {};
-  photos.forEach((photo) => {
-    const photoDate = new Date(photo.date);
-    if (photoDate.getFullYear() === year && photoDate.getMonth() + 1 === month) {
-      photosByDate[photoDate.getDate()] = photo;
-    }
-  });
-
-  const calendarDays: (number | null)[] = [];
-  for (let i = 0; i < firstDay; i++) calendarDays.push(null);
-  for (let d = 1; d <= daysInMonth; d++) calendarDays.push(d);
-  while (calendarDays.length % 7 !== 0) calendarDays.push(null);
-
-  const weeks: (number | null)[][] = [];
-  for (let i = 0; i < calendarDays.length; i += 7) {
-    weeks.push(calendarDays.slice(i, i + 7));
-  }
-
+  // 월 변경 시 selectedIndex 동기화
   useEffect(() => {
-    const timer = setTimeout(() => {
-      monthScrollRef.current?.scrollTo({ x: (month - 1) * 80 - 100, animated: false });
-    }, 100);
-    return () => clearTimeout(timer);
+    if (month >= 1 && month <= maxSelectableMonth) {
+      setSelectedIndex(month - 1);
+    }
   }, [month]);
 
-  const handleMonthSelect = (selectedMonth: number) => {
-    const now = new Date();
-    const maxMonth = now.getFullYear() === year ? now.getMonth() + 1 : 12;
-    if (selectedMonth <= maxMonth) {
-      if (selectedMonth < month) {
-        for (let i = 0; i < month - selectedMonth; i++) onPrevMonth();
-      } else if (selectedMonth > month) {
-        for (let i = 0; i < selectedMonth - month; i++) onNextMonth();
-      }
+  // 월별 사진 개수 계산
+  const getPhotoCountForMonth = useCallback((monthNum: number) => {
+    return photos.filter((photo) => {
+      const photoDate = new Date(photo.date);
+      return photoDate.getFullYear() === year && photoDate.getMonth() + 1 === monthNum;
+    }).length;
+  }, [photos, year]);
+
+  // 카드 선택 변경 핸들러
+  const changeSelectedIndex = useCallback((newIndex: number) => {
+    const clampedIndex = Math.max(0, Math.min(newIndex, maxSelectableMonth - 1));
+    const diff = clampedIndex - selectedIndex;
+
+    setSelectedIndex(clampedIndex);
+
+    // 월 변경 콜백 호출
+    if (diff > 0) {
+      for (let i = 0; i < diff; i++) onNextMonth();
+    } else if (diff < 0) {
+      for (let i = 0; i < Math.abs(diff); i++) onPrevMonth();
     }
-  };
+  }, [selectedIndex, onPrevMonth, onNextMonth, maxSelectableMonth]);
+
+  // 카드 탭 핸들러 - 탭한 카드로 이동
+  const handleCardTap = useCallback((index: number) => {
+    if (index !== selectedIndex) {
+      changeSelectedIndex(index);
+    }
+  }, [selectedIndex, changeSelectedIndex]);
+
+  // 전체 영역 스와이프 제스처
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      'worklet';
+      dragOffset.value = event.translationY;
+    })
+    .onEnd((event) => {
+      'worklet';
+      const velocity = event.velocityY;
+      const translation = event.translationY;
+
+      // 스와이프 방향 판단 (위로 스와이프 = 다음 카드, 아래로 스와이프 = 이전 카드)
+      if (translation < -SWIPE_THRESHOLD || velocity < -500) {
+        // 위로 스와이프 -> 다음 카드 (인덱스 증가)
+        runOnJS(changeSelectedIndex)(selectedIndex + 1);
+      } else if (translation > SWIPE_THRESHOLD || velocity > 500) {
+        // 아래로 스와이프 -> 이전 카드 (인덱스 감소)
+        runOnJS(changeSelectedIndex)(selectedIndex - 1);
+      }
+
+      dragOffset.value = withSpring(0, springConfig);
+    });
+
+  // 1월부터 순서대로
+  const availableMonths = Array.from({ length: maxSelectableMonth }, (_, i) => i + 1);
 
   return (
-    <Box className="flex-1 bg-white">
-      <Box className="px-6" style={{ paddingTop: insets.top + 16 }}>
-        <HStack className="items-center justify-between">
-          <Pressable
-            onPress={onOpenSettings}
-            className="h-10 w-10 items-center justify-center rounded-full bg-black"
-          >
-            <Feather name="user" size={18} color="#fff" />
-          </Pressable>
-          <Heading className="text-lg text-black">{year}</Heading>
-          <Box className="w-10" />
-        </HStack>
-      </Box>
-
-      <ScrollView
-        ref={monthScrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="mt-6"
-        contentContainerStyle={{ paddingHorizontal: 24 }}
-      >
-        {MONTH_NAMES.map((name, index) => {
-          const monthNum = index + 1;
-          const isSelected = monthNum === month;
-          const now = new Date();
-          const isDisabled = year === now.getFullYear() && monthNum > now.getMonth() + 1;
-
-          return (
-            <Pressable
-              key={name}
-              onPress={() => handleMonthSelect(monthNum)}
-              disabled={isDisabled}
-              className="mr-4"
-            >
-              <Text
-                className={`text-xl ${
-                  isSelected
-                    ? 'font-bold text-black'
-                    : isDisabled
-                    ? 'font-light text-neutral-200'
-                    : 'font-light text-neutral-400'
-                }`}
-              >
-                {name}
-              </Text>
+    <GestureHandlerRootView style={styles.container}>
+      <Box className="flex-1" style={{ backgroundColor: '#000000' }}>
+        {/* 헤더 */}
+        <Box className="px-8" style={{ paddingTop: insets.top + 16, paddingBottom: 24 }}>
+          <HStack className="items-center justify-between">
+            <VStack>
+              <Heading className="text-3xl font-wanted-bold text-white">{year}년</Heading>
+              <Heading className="text-3xl font-wanted-bold text-white">앨범</Heading>
+            </VStack>
+            <Pressable onPress={onOpenSettings} hitSlop={16}>
+              <Feather name="settings" size={24} color="#FFFFFF" />
             </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <Card className="mx-6 mt-6 p-4 rounded-2xl border border-neutral-100">
-          <HStack className="mb-2">
-            {WEEKDAY_LABELS.map((label, index) => (
-              <Center
-                key={`${label}-${index}`}
-                style={{ width: (SCREEN_WIDTH - 48 - 32 - GRID_GAP * 6) / 7 }}
-                className="py-2"
-              >
-                <Text className="text-xs font-medium text-neutral-400">
-                  {label}
-                </Text>
-              </Center>
-            ))}
           </HStack>
-
-          {weeks.map((week, weekIndex) => (
-            <HStack key={weekIndex} style={{ marginBottom: GRID_GAP }}>
-              {week.map((dayValue, dayIndex) => {
-                const cellWidth = (SCREEN_WIDTH - 48 - 32 - GRID_GAP * 6) / 7;
-                if (dayValue === null) return <Box key={`empty-${dayIndex}`} style={{ width: cellWidth, height: cellWidth }} />;
-
-                const photo = photosByDate[dayValue];
-                const isToday = isCurrentMonth && dayValue === todayDate;
-                const isPast = isCurrentMonth ? dayValue < todayDate : true;
-                const isFuture = isCurrentMonth && dayValue > todayDate;
-
-                return (
-                  <Pressable
-                    key={dayValue}
-                    onPress={() => {
-                      if (photo) onSelectPhoto(photo);
-                      else if (!isFuture) onSelectEmptyDay(new Date(year, month - 1, dayValue));
-                    }}
-                    disabled={isFuture}
-                    style={{ width: cellWidth, height: cellWidth }}
-                  >
-                    {photo ? (
-                      <Center className="flex-1 rounded-lg bg-black">
-                        <Feather name="check" size={14} color="#fff" />
-                      </Center>
-                    ) : isToday ? (
-                      <Center className="flex-1 rounded-lg bg-black">
-                        <Text className="text-xs font-bold text-white">{dayValue}</Text>
-                      </Center>
-                    ) : isPast ? (
-                      <Center className="flex-1 rounded-lg bg-neutral-50">
-                        <Text className="text-xs text-neutral-400">{dayValue}</Text>
-                      </Center>
-                    ) : (
-                      <Center className="flex-1 rounded-lg">
-                        <Text className="text-xs text-neutral-300">{dayValue}</Text>
-                      </Center>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </HStack>
-          ))}
-        </Card>
-
-        <Box className="mx-6 mt-8">
-          <Text className="text-lg font-bold text-black mb-4">Today</Text>
-          <VStack space="sm">
-            <Card className="p-4 rounded-2xl bg-neutral-50 border-0">
-              <HStack className="justify-between items-center">
-                <HStack space="md" className="items-center">
-                  <Center className="h-8 w-8 rounded-full bg-black">
-                    <Feather name="check" size={14} color="#fff" />
-                  </Center>
-                  <VStack>
-                    <Text className="text-sm font-medium text-black">완료한 미션</Text>
-                    <Text className="text-xs text-neutral-400">이번 달</Text>
-                  </VStack>
-                </HStack>
-                <Text className="text-lg font-bold text-black">{stats?.completedDays || 0}일</Text>
-              </HStack>
-            </Card>
-
-            <Card className="p-4 rounded-2xl bg-neutral-50 border-0">
-              <HStack className="justify-between items-center">
-                <HStack space="md" className="items-center">
-                  <Center className="h-8 w-8 rounded-full bg-black">
-                    <Feather name="zap" size={14} color="#fff" />
-                  </Center>
-                  <VStack>
-                    <Text className="text-sm font-medium text-black">연속 달성</Text>
-                    <Text className="text-xs text-neutral-400">최장 기록</Text>
-                  </VStack>
-                </HStack>
-                <Text className="text-lg font-bold text-black">{stats?.longestStreak || 0}일</Text>
-              </HStack>
-            </Card>
-
-            {stats && stats.completedDays > 0 && (
-              <Card className="p-4 rounded-2xl bg-black mt-2 border-0">
-                <HStack className="justify-between items-center">
-                  <VStack>
-                    <Text className="text-sm font-medium text-white">앨범 만들기</Text>
-                    <Text className="text-xs text-neutral-400">
-                      {MONTH_SHORT[month - 1]}의 추억을 저장하세요
-                    </Text>
-                  </VStack>
-                  <Center className="h-10 w-10 rounded-full bg-white">
-                    <Feather name="download" size={18} color="#000" />
-                  </Center>
-                </HStack>
-              </Card>
-            )}
-          </VStack>
         </Box>
-      </ScrollView>
-    </Box>
+
+        {/* 카드 스택 - 전체 영역에 스와이프 제스처 적용 */}
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[styles.cardContainer, { marginBottom: insets.bottom + 90 }]}>
+            {availableMonths.map((monthNum, index) => {
+              const color = MONTH_COLORS[monthNum - 1];
+              const photoCount = getPhotoCountForMonth(monthNum);
+              const daysInMonth = new Date(year, monthNum, 0).getDate();
+              const completionRate = Math.round((photoCount / daysInMonth) * 100);
+
+              return (
+                <Card
+                  key={monthNum}
+                  monthNum={monthNum}
+                  index={index}
+                  photoCount={photoCount}
+                  daysInMonth={daysInMonth}
+                  completionRate={completionRate}
+                  color={color}
+                  selectedIndex={selectedIndex}
+                  dragOffset={dragOffset}
+                  onTap={handleCardTap}
+                />
+              );
+            })}
+          </Animated.View>
+        </GestureDetector>
+      </Box>
+    </GestureHandlerRootView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  cardContainer: {
+    flex: 1,
+    marginHorizontal: 0,
+  },
+  card: {
+    flex: 1,
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  cardHeader: {
+    height: 50,
+  },
+  monthName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  percentSymbol: {
+    fontSize: 12,
+    fontWeight: '500',
+    opacity: 0.5,
+    marginBottom: 8,
+    marginRight: 2,
+  },
+  percentValue: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    lineHeight: 44,
+  },
+  cardContent: {
+    marginTop: 8,
+  },
+  recordText: {
+    fontSize: 14,
+    opacity: 0.5,
+  },
+  statsRow: {
+    gap: 24,
+  },
+  statsLabel: {
+    fontSize: 12,
+    opacity: 0.5,
+  },
+  statsValue: {
+    fontSize: 22,
+    fontWeight: '600',
+  },
+});
 
 export default MonthlyAlbumPage;
