@@ -26,7 +26,6 @@ interface Props {
   onNextMonth: () => void;
   onSelectPhoto: (photo: PhotoEntry) => void;
   onSelectEmptyDay: (date: Date) => void;
-  onOpenSettings: () => void;
   onCreateAlbum: () => void;
 }
 
@@ -39,7 +38,6 @@ const CalendarPage: React.FC<Props> = ({
   onNextMonth,
   onSelectPhoto,
   onSelectEmptyDay,
-  onOpenSettings,
   onCreateAlbum,
 }) => {
   const insets = useSafeAreaInsets();
@@ -189,9 +187,7 @@ const CalendarPage: React.FC<Props> = ({
               {month}월
             </Heading>
           </VStack>
-          <Pressable onPress={onOpenSettings} hitSlop={12}>
-            <Feather name="settings" size={22} color="#000" />
-          </Pressable>
+          <Box style={{ width: 40 }} />
         </HStack>
 
         {/* Achievement Rate */}

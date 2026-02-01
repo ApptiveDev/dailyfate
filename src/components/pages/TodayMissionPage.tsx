@@ -19,7 +19,6 @@ interface Props {
   loading: boolean;
   onOpenCamera: () => void;
   onOpenGallery: () => void;
-  onOpenSettings: () => void;
   onViewPhoto: () => void;
 }
 
@@ -31,7 +30,6 @@ const TodayMissionPage: React.FC<Props> = ({
   todayPhoto,
   loading,
   onOpenCamera,
-  onOpenSettings,
   onViewPhoto,
 }) => {
   const insets = useSafeAreaInsets();
@@ -59,10 +57,7 @@ const TodayMissionPage: React.FC<Props> = ({
         {/* Header */}
         <HStack className="items-center justify-between pt-4">
           <Feather name="command" size={28} color="#FFFFFF" />
-
-          <Pressable onPress={onOpenSettings} hitSlop={16}>
-            <Feather name="settings" size={24} color="#FFFFFF" />
-          </Pressable>
+          <Box style={{ width: 24 }} />
         </HStack>
 
         {/* Mission Text Area */}

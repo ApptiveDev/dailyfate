@@ -20,4 +20,3 @@ export type { TabType } from './BottomTabBar';
 export { default as LoginScreen } from './LoginScreen';
 export { default as Onboarding } from './Onboarding';
 export { default as UserInfoForm } from './UserInfoForm';
-export { default as SettingsSheet } from './SettingsSheet';

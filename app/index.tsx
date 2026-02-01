@@ -16,7 +16,6 @@ import {
   Onboarding,
   LoginScreen,
   UserInfoForm,
-  SettingsSheet,
 } from '@/components';
 import type { TabType } from '@/components';
 import { useMission } from '@/providers/MissionProvider';
@@ -119,14 +118,6 @@ export default function Home() {
     Alert.alert('공유', '공유 기능은 아직 구현되지 않았습니다.');
   }, []);
 
-  const handleOpenSettings = useCallback(() => {
-    modals.openModal('settings');
-  }, [modals]);
-
-  const handleCloseSettings = useCallback(() => {
-    modals.closeModal('settings');
-  }, [modals]);
-
   const handleCreateAlbum = useCallback(() => {
     setShowAlbumDetail(true);
   }, []);
@@ -192,7 +183,6 @@ export default function Home() {
           loading={false}
           onOpenCamera={handleOpenCamera}
           onOpenGallery={() => modals.openModal('camera')}
-          onOpenSettings={handleOpenSettings}
           onViewPhoto={handleViewTodayPhoto}
         />
       )}
@@ -207,7 +197,6 @@ export default function Home() {
           onNextMonth={monthlyAlbum.goToNextMonth}
           onSelectPhoto={handleSelectPhoto}
           onSelectEmptyDay={handleSelectEmptyDay}
-          onOpenSettings={handleOpenSettings}
           onCreateAlbum={handleCreateAlbum}
         />
       )}
@@ -222,7 +211,6 @@ export default function Home() {
           onNextMonth={monthlyAlbum.goToNextMonth}
           onSelectPhoto={handleSelectPhoto}
           onSelectEmptyDay={handleSelectEmptyDay}
-          onOpenSettings={handleOpenSettings}
           onSelectMonth={handleNavigateToCalendar}
         />
       )}
@@ -246,21 +234,6 @@ export default function Home() {
 
       {/* Bottom Tab Bar */}
       <BottomTabBar activeTab={activeTab} onTabPress={setActiveTab} />
-
-      {/* Settings Sheet */}
-      {bootstrap.userSettings && (
-        <SettingsSheet
-          visible={modals.isSettingsOpen}
-          settings={bootstrap.userSettings}
-          onClose={handleCloseSettings}
-          onSave={async (nextSettings) => {
-            await bootstrap.persistUserSettings(nextSettings);
-            handleCloseSettings();
-          }}
-          onLogout={bootstrap.requireLogin}
-          onUnauthorized={bootstrap.requireLogin}
-        />
-      )}
 
       {/* Camera Modal */}
       <Modal visible={modals.isCameraOpen} animationType="slide">

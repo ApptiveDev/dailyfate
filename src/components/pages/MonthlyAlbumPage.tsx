@@ -23,7 +23,6 @@ interface Props {
   onNextMonth: () => void;
   onSelectPhoto: (photo: PhotoEntry) => void;
   onSelectEmptyDay: (date: Date) => void;
-  onOpenSettings: () => void;
   onSelectMonth?: (year: number, month: number) => void;
 }
 
@@ -205,7 +204,6 @@ const CardItem: React.FC<CardItemProps> = ({ item, index, scrollY, totalCount, o
 };
 
 const MonthlyAlbumPage: React.FC<Props> = ({
-  onOpenSettings,
   onSelectMonth,
 }) => {
   const insets = useSafeAreaInsets();
@@ -262,14 +260,7 @@ const MonthlyAlbumPage: React.FC<Props> = ({
             <Text style={styles.headerSubtitle}>나의 기록</Text>
             <Text style={styles.headerTitle}>월별 통계</Text>
           </View>
-          <Pressable
-            onPress={onOpenSettings}
-            hitSlop={16}
-            accessibilityLabel="설정 열기"
-            accessibilityRole="button"
-          >
-            <Feather name="settings" size={22} color="#4A4A4A" />
-          </Pressable>
+          <View style={{ width: 22 }} />
         </View>
 
         {/* 카드 스택 */}
