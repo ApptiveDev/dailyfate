@@ -18,6 +18,7 @@
     "@expo/vector-icons": "^14.0.2",
     "@gluestack-ui/nativewind-utils": "^1.0.28",
     "@react-native-async-storage/async-storage": "^1.23.1",
+    "@react-native-community/datetimepicker": "^8.6.0",
     "@react-navigation/native": "^7.1.25",
     "amazon-cognito-identity-js": "^6.3.16",
     "buffer": "^6.0.3",

@@ -1,23 +1,22 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
   Linking,
-  Modal,
+  Platform,
   Pressable,
   ScrollView,
   Switch,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import type { PhotoEntry, UserSettings } from '@/types';
 import { Box, Text, HStack, VStack, Center, Heading, Card, Input } from '../ui';
 
 const CONTACT_EMAIL = 'bluebird.happier@gmail.com';
-const ITEM_HEIGHT = 48;
-const VISIBLE_ITEMS = 5;
 const DEFAULT_NOTIFICATION_TIME = '08:00';
 const NOTIFICATION_MINUTE_STEP = 5;
 
@@ -26,28 +25,23 @@ const pad2 = (value: number) => String(value).padStart(2, '0');
 const parseTimeParts = (value: string, fallback: string) => {
   const [fallbackHour, fallbackMinute] = fallback.split(':');
   const match = value.match(/(\d{1,2}):(\d{1,2})/);
-  if (!match) return { hour: fallbackHour, minute: fallbackMinute };
+  if (!match) return { hour: Number(fallbackHour), minute: Number(fallbackMinute) };
   const hourNumber = Number(match[1]);
   const minuteNumber = Number(match[2]);
-  const hour = pad2(hourNumber);
-  const minute = pad2(minuteNumber);
   if (
     !Number.isFinite(hourNumber) ||
     !Number.isFinite(minuteNumber) ||
     hourNumber > 23 ||
     minuteNumber > 59
   ) {
-    return { hour: fallbackHour, minute: fallbackMinute };
+    return { hour: Number(fallbackHour), minute: Number(fallbackMinute) };
   }
-  return { hour, minute };
+  return { hour: hourNumber, minute: minuteNumber };
 };
 
-const normalizeMinuteToStep = (minute: string, step: number) => {
-  const numeric = Number(minute);
-  if (!Number.isFinite(numeric)) return minute;
-  const normalized = Math.floor(numeric / step) * step;
-  const bounded = Math.min(Math.max(normalized, 0), 59);
-  return pad2(bounded);
+const normalizeMinuteToStep = (minute: number, step: number) => {
+  const normalized = Math.floor(minute / step) * step;
+  return Math.min(Math.max(normalized, 0), 59);
 };
 
 interface ProfileStats {
@@ -66,127 +60,6 @@ interface Props {
   onDeleteAccount: () => void;
   isSaving?: boolean;
 }
-
-// WheelPicker for time selection
-const WheelPicker: React.FC<{
-  options: string[];
-  value: string;
-  onChange: (value: string) => void;
-}> = ({ options, value, onChange }) => {
-  const scrollRef = useRef<ScrollView | null>(null);
-  const padding = ((VISIBLE_ITEMS - 1) / 2) * ITEM_HEIGHT;
-
-  useEffect(() => {
-    if (!options.length) return;
-    const index = Math.max(0, options.indexOf(value));
-    scrollRef.current?.scrollTo({ y: index * ITEM_HEIGHT, animated: false });
-  }, [options, value]);
-
-  const handleScrollEnd = (event: { nativeEvent: { contentOffset: { y: number } } }) => {
-    if (!options.length) return;
-    const offsetY = event.nativeEvent.contentOffset.y;
-    const index = Math.round(offsetY / ITEM_HEIGHT);
-    const bounded = Math.max(0, Math.min(index, options.length - 1));
-    const nextValue = options[bounded];
-    if (nextValue !== value) onChange(nextValue);
-  };
-
-  return (
-    <Box className="overflow-hidden" style={{ height: ITEM_HEIGHT * VISIBLE_ITEMS }}>
-      <ScrollView
-        ref={scrollRef}
-        showsVerticalScrollIndicator={false}
-        snapToInterval={ITEM_HEIGHT}
-        decelerationRate="fast"
-        onMomentumScrollEnd={handleScrollEnd}
-        onScrollEndDrag={handleScrollEnd}
-        nestedScrollEnabled
-        contentContainerStyle={{ paddingVertical: padding }}
-      >
-        {options.map((option) => {
-          const isSelected = option === value;
-          return (
-            <Center key={option} style={{ height: ITEM_HEIGHT }}>
-              <Text
-                className={`text-2xl font-semibold ${isSelected ? 'text-white' : 'text-neutral-600'}`}
-              >
-                {option}
-              </Text>
-            </Center>
-          );
-        })}
-      </ScrollView>
-      <Box
-        pointerEvents="none"
-        className="absolute left-0 right-0 border-t border-b border-neutral-700"
-        style={{ top: padding, height: ITEM_HEIGHT }}
-      />
-    </Box>
-  );
-};
-
-// Time Picker Modal
-const TimePickerModal: React.FC<{
-  visible: boolean;
-  onClose: () => void;
-  initialHour: string;
-  initialMinute: string;
-  onSave: (hour: string, minute: string) => void;
-  hourOptions: string[];
-  minuteOptions: string[];
-}> = ({ visible, onClose, initialHour, initialMinute, onSave, hourOptions, minuteOptions }) => {
-  const [hour, setHour] = useState(initialHour);
-  const [minute, setMinute] = useState(initialMinute);
-
-  // Reset to initial values when modal opens
-  useEffect(() => {
-    if (visible) {
-      setHour(initialHour);
-      setMinute(initialMinute);
-    }
-  }, [visible, initialHour, initialMinute]);
-
-  const handleSave = () => {
-    onSave(hour, minute);
-    onClose();
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable className="flex-1 items-center justify-center bg-black/60" onPress={onClose}>
-        <Pressable className="w-80 rounded-3xl bg-neutral-900 p-6" onPress={(e) => e.stopPropagation()}>
-          <HStack className="justify-between items-center mb-6">
-            <Heading className="text-xl text-white">알림 시간</Heading>
-            <Pressable onPress={onClose} hitSlop={12}>
-              <Feather name="x" size={24} color="#fff" />
-            </Pressable>
-          </HStack>
-
-          <HStack className="mb-4">
-            <Text className="flex-1 text-center text-sm text-neutral-500">시</Text>
-            <Text className="flex-1 text-center text-sm text-neutral-500">분</Text>
-          </HStack>
-
-          <HStack>
-            <Box className="flex-1">
-              <WheelPicker options={hourOptions} value={hour} onChange={setHour} />
-            </Box>
-            <Box className="flex-1">
-              <WheelPicker options={minuteOptions} value={minute} onChange={setMinute} />
-            </Box>
-          </HStack>
-
-          <Pressable
-            onPress={handleSave}
-            className="mt-6 py-4 rounded-2xl bg-white items-center"
-          >
-            <Text className="text-base font-semibold text-black">완료</Text>
-          </Pressable>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-};
 
 // Nickname Edit Modal
 const NicknameEditModal: React.FC<{
@@ -208,36 +81,43 @@ const NicknameEditModal: React.FC<{
     }
   };
 
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable className="flex-1 items-center justify-center bg-black/60" onPress={onClose}>
-        <Pressable className="w-80 rounded-3xl bg-white p-6" onPress={(e) => e.stopPropagation()}>
-          <HStack className="justify-between items-center mb-6">
-            <Heading className="text-xl text-black">닉네임 수정</Heading>
-            <Pressable onPress={onClose} hitSlop={12}>
-              <Feather name="x" size={24} color="#000" />
-            </Pressable>
-          </HStack>
-
-          <Input
-            value={value}
-            onChangeText={setValue}
-            placeholder="닉네임을 입력하세요"
-            className="border border-neutral-200 rounded-xl px-4 py-3 text-base"
-            autoFocus
-          />
-
-          <Pressable
-            onPress={handleSave}
-            disabled={!value.trim()}
-            className="mt-6 py-4 rounded-2xl bg-black items-center"
-            style={{ opacity: value.trim() ? 1 : 0.5 }}
-          >
-            <Text className="text-base font-semibold text-white">저장</Text>
+    <Pressable
+      className="absolute inset-0 items-center justify-center bg-black/60"
+      onPress={onClose}
+      style={{ zIndex: 100 }}
+    >
+      <Pressable
+        className="w-80 rounded-3xl bg-white p-6"
+        onPress={(e) => e.stopPropagation()}
+      >
+        <HStack className="justify-between items-center mb-6">
+          <Heading className="text-xl text-black">닉네임 수정</Heading>
+          <Pressable onPress={onClose} hitSlop={12}>
+            <Feather name="x" size={24} color="#000" />
           </Pressable>
+        </HStack>
+
+        <Input
+          value={value}
+          onChangeText={setValue}
+          placeholder="닉네임을 입력하세요"
+          className="border border-neutral-200 rounded-xl px-4 py-3 text-base"
+          autoFocus
+        />
+
+        <Pressable
+          onPress={handleSave}
+          disabled={!value.trim()}
+          className="mt-6 py-4 rounded-2xl bg-black items-center"
+          style={{ opacity: value.trim() ? 1 : 0.5 }}
+        >
+          <Text className="text-base font-semibold text-white">저장</Text>
         </Pressable>
       </Pressable>
-    </Modal>
+    </Pressable>
   );
 };
 
@@ -252,7 +132,7 @@ const ProfilePage: React.FC<Props> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [isNicknameModalOpen, setIsNicknameModalOpen] = useState(false);
-  const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [localSettings, setLocalSettings] = useState<UserSettings | null>(userSettings);
 
   // Sync local settings when userSettings changes
@@ -319,21 +199,21 @@ const ProfilePage: React.FC<Props> = ({
       .slice(0, 6);
   }, [photos]);
 
-  // Time picker options
-  const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => pad2(i)), []);
-  const minuteOptions = useMemo(
-    () => Array.from({ length: 60 / NOTIFICATION_MINUTE_STEP }, (_, i) => pad2(i * NOTIFICATION_MINUTE_STEP)),
-    []
-  );
-
-  const { hour: notifyHour, minute: notifyMinute } = useMemo(() => {
+  // Parse notification time for display and picker
+  const { notifyHour, notifyMinute, timePickerDate } = useMemo(() => {
     const parsed = parseTimeParts(
       localSettings?.notificationTime || DEFAULT_NOTIFICATION_TIME,
       DEFAULT_NOTIFICATION_TIME
     );
+    const normalizedMinute = normalizeMinuteToStep(parsed.minute, NOTIFICATION_MINUTE_STEP);
+
+    const date = new Date();
+    date.setHours(parsed.hour, normalizedMinute, 0, 0);
+
     return {
-      hour: parsed.hour,
-      minute: normalizeMinuteToStep(parsed.minute, NOTIFICATION_MINUTE_STEP),
+      notifyHour: pad2(parsed.hour),
+      notifyMinute: pad2(normalizedMinute),
+      timePickerDate: date,
     };
   }, [localSettings?.notificationTime]);
 
@@ -347,7 +227,6 @@ const ProfilePage: React.FC<Props> = ({
     try {
       await onSaveSettings(updated);
     } catch {
-      // Revert on error
       setLocalSettings(localSettings);
     }
   };
@@ -360,8 +239,16 @@ const ProfilePage: React.FC<Props> = ({
     void updateAndSave({ notificationEnabled: enabled });
   };
 
-  const handleTimeChange = (hour: string, minute: string) => {
-    void updateAndSave({ notificationTime: `${hour}:${minute}` });
+  const handleTimeChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+
+    if (event.type === 'set' && selectedDate) {
+      const hours = selectedDate.getHours();
+      const minutes = normalizeMinuteToStep(selectedDate.getMinutes(), NOTIFICATION_MINUTE_STEP);
+      void updateAndSave({ notificationTime: `${pad2(hours)}:${pad2(minutes)}` });
+    }
   };
 
   const handleLogout = () => {
@@ -556,7 +443,7 @@ const ProfilePage: React.FC<Props> = ({
           {/* Notification Time */}
           {localSettings?.notificationEnabled && (
             <Pressable
-              onPress={() => setIsTimePickerOpen(true)}
+              onPress={() => setShowTimePicker(true)}
               className="bg-neutral-50 rounded-2xl p-4"
             >
               <HStack className="items-center justify-between">
@@ -662,16 +549,44 @@ const ProfilePage: React.FC<Props> = ({
         onSave={handleNicknameSave}
       />
 
-      {/* Time Picker Modal */}
-      <TimePickerModal
-        visible={isTimePickerOpen}
-        onClose={() => setIsTimePickerOpen(false)}
-        initialHour={notifyHour}
-        initialMinute={notifyMinute}
-        onSave={handleTimeChange}
-        hourOptions={hourOptions}
-        minuteOptions={minuteOptions}
-      />
+      {/* Native Time Picker */}
+      {showTimePicker && (
+        Platform.OS === 'ios' ? (
+          <Box className="absolute inset-0 justify-end bg-black/40" style={{ zIndex: 100 }}>
+            <Pressable className="flex-1" onPress={() => setShowTimePicker(false)} />
+            <Box className="bg-white rounded-t-3xl">
+              <HStack className="justify-between items-center px-6 py-4 border-b border-neutral-100">
+                <Pressable onPress={() => setShowTimePicker(false)}>
+                  <Text className="text-neutral-500 text-base">취소</Text>
+                </Pressable>
+                <Text className="text-black text-lg font-wanted-bold">알림 시간</Text>
+                <Pressable onPress={() => setShowTimePicker(false)}>
+                  <Text className="text-black text-base font-wanted-semibold">완료</Text>
+                </Pressable>
+              </HStack>
+              <Box className="items-center pb-8">
+                <DateTimePicker
+                  value={timePickerDate}
+                  mode="time"
+                  display="spinner"
+                  onChange={handleTimeChange}
+                  minuteInterval={NOTIFICATION_MINUTE_STEP}
+                  locale="ko-KR"
+                  style={{ height: 200 }}
+                />
+              </Box>
+            </Box>
+          </Box>
+        ) : (
+          <DateTimePicker
+            value={timePickerDate}
+            mode="time"
+            display="spinner"
+            onChange={handleTimeChange}
+            minuteInterval={NOTIFICATION_MINUTE_STEP}
+          />
+        )
+      )}
     </Box>
   );
 };
