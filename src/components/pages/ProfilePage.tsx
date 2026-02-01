@@ -129,47 +129,64 @@ const WheelPicker: React.FC<{
 const TimePickerModal: React.FC<{
   visible: boolean;
   onClose: () => void;
-  hour: string;
-  minute: string;
-  onChangeHour: (value: string) => void;
-  onChangeMinute: (value: string) => void;
+  initialHour: string;
+  initialMinute: string;
+  onSave: (hour: string, minute: string) => void;
   hourOptions: string[];
   minuteOptions: string[];
-}> = ({ visible, onClose, hour, minute, onChangeHour, onChangeMinute, hourOptions, minuteOptions }) => (
-  <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-    <Pressable className="flex-1 items-center justify-center bg-black/60" onPress={onClose}>
-      <Pressable className="w-80 rounded-3xl bg-neutral-900 p-6" onPress={(e) => e.stopPropagation()}>
-        <HStack className="justify-between items-center mb-6">
-          <Heading className="text-xl text-white">알림 시간</Heading>
-          <Pressable onPress={onClose} hitSlop={12}>
-            <Feather name="x" size={24} color="#fff" />
+}> = ({ visible, onClose, initialHour, initialMinute, onSave, hourOptions, minuteOptions }) => {
+  const [hour, setHour] = useState(initialHour);
+  const [minute, setMinute] = useState(initialMinute);
+
+  // Reset to initial values when modal opens
+  useEffect(() => {
+    if (visible) {
+      setHour(initialHour);
+      setMinute(initialMinute);
+    }
+  }, [visible, initialHour, initialMinute]);
+
+  const handleSave = () => {
+    onSave(hour, minute);
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable className="flex-1 items-center justify-center bg-black/60" onPress={onClose}>
+        <Pressable className="w-80 rounded-3xl bg-neutral-900 p-6" onPress={(e) => e.stopPropagation()}>
+          <HStack className="justify-between items-center mb-6">
+            <Heading className="text-xl text-white">알림 시간</Heading>
+            <Pressable onPress={onClose} hitSlop={12}>
+              <Feather name="x" size={24} color="#fff" />
+            </Pressable>
+          </HStack>
+
+          <HStack className="mb-4">
+            <Text className="flex-1 text-center text-sm text-neutral-500">시</Text>
+            <Text className="flex-1 text-center text-sm text-neutral-500">분</Text>
+          </HStack>
+
+          <HStack>
+            <Box className="flex-1">
+              <WheelPicker options={hourOptions} value={hour} onChange={setHour} />
+            </Box>
+            <Box className="flex-1">
+              <WheelPicker options={minuteOptions} value={minute} onChange={setMinute} />
+            </Box>
+          </HStack>
+
+          <Pressable
+            onPress={handleSave}
+            className="mt-6 py-4 rounded-2xl bg-white items-center"
+          >
+            <Text className="text-base font-semibold text-black">완료</Text>
           </Pressable>
-        </HStack>
-
-        <HStack className="mb-4">
-          <Text className="flex-1 text-center text-sm text-neutral-500">시</Text>
-          <Text className="flex-1 text-center text-sm text-neutral-500">분</Text>
-        </HStack>
-
-        <HStack>
-          <Box className="flex-1">
-            <WheelPicker options={hourOptions} value={hour} onChange={onChangeHour} />
-          </Box>
-          <Box className="flex-1">
-            <WheelPicker options={minuteOptions} value={minute} onChange={onChangeMinute} />
-          </Box>
-        </HStack>
-
-        <Pressable
-          onPress={onClose}
-          className="mt-6 py-4 rounded-2xl bg-white items-center"
-        >
-          <Text className="text-base font-semibold text-black">완료</Text>
         </Pressable>
       </Pressable>
-    </Pressable>
-  </Modal>
-);
+    </Modal>
+  );
+};
 
 // Nickname Edit Modal
 const NicknameEditModal: React.FC<{
@@ -649,10 +666,9 @@ const ProfilePage: React.FC<Props> = ({
       <TimePickerModal
         visible={isTimePickerOpen}
         onClose={() => setIsTimePickerOpen(false)}
-        hour={notifyHour}
-        minute={notifyMinute}
-        onChangeHour={(h) => handleTimeChange(h, notifyMinute)}
-        onChangeMinute={(m) => handleTimeChange(notifyHour, m)}
+        initialHour={notifyHour}
+        initialMinute={notifyMinute}
+        onSave={handleTimeChange}
         hourOptions={hourOptions}
         minuteOptions={minuteOptions}
       />
