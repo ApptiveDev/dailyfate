@@ -268,9 +268,6 @@ const MonthlyAlbumPage: React.FC<Props> = ({ onSelectMonth }) => {
             <Text style={styles.screenSubtitle}>나의 기록</Text>
             <Heading style={styles.screenTitle}>월별 통계</Heading>
           </VStack>
-          <Pressable style={styles.settingsButton}>
-            <Feather name="settings" size={24} color="#000000" />
-          </Pressable>
         </Animated.View>
 
         {/* Backdrop - 투명하게 유지하여 화면이 어두워지지 않도록 함 */}
@@ -329,7 +326,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     paddingHorizontal: 24,
-    marginBottom: 12,
+    marginBottom: 32, // 헤더와 카드 사이 여백
     zIndex: 2000,
   },
   screenSubtitle: {

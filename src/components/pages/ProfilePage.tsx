@@ -360,55 +360,6 @@ const ProfilePage: React.FC<Props> = ({
           </Card>
         </Box>
 
-        {/* Recent Photos Section */}
-        <Box className="px-6 mt-8">
-          <HStack className="justify-between items-center mb-4">
-            <Text className="text-black text-lg font-wanted-bold">
-              최근 기록
-            </Text>
-            <Text className="text-neutral-400 text-sm font-wanted-regular">
-              {recentPhotos.length}장
-            </Text>
-          </HStack>
-
-          {recentPhotos.length > 0 ? (
-            <Box className="flex-row flex-wrap justify-between">
-              {recentPhotos.map((photo) => (
-                <Pressable
-                  key={photo.id}
-                  onPress={() => onSelectPhoto(photo)}
-                  style={{
-                    width: '32%',
-                    aspectRatio: 1,
-                    marginBottom: 8,
-                    borderRadius: 12,
-                    overflow: 'hidden',
-                  }}
-                >
-                  {photo.photoUri.startsWith('dummy://') ? (
-                    <Center className="flex-1 bg-neutral-100">
-                      <Feather name="image" size={24} color="#a3a3a3" />
-                    </Center>
-                  ) : (
-                    <Image
-                      source={{ uri: photo.photoUri }}
-                      style={{ width: '100%', height: '100%' }}
-                      resizeMode="cover"
-                    />
-                  )}
-                </Pressable>
-              ))}
-            </Box>
-          ) : (
-            <Center className="py-12 bg-neutral-50 rounded-2xl">
-              <Feather name="camera" size={32} color="#d4d4d4" />
-              <Text className="text-neutral-400 text-sm mt-3 font-wanted-regular">
-                아직 기록된 사진이 없습니다
-              </Text>
-            </Center>
-          )}
-        </Box>
-
         {/* Notification Settings */}
         <Box className="px-6 mt-8">
           <Text className="text-black text-lg font-wanted-bold mb-4">

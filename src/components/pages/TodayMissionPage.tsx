@@ -94,18 +94,18 @@ const TodayMissionPage: React.FC<Props> = ({
             <Pressable onPress={onViewPhoto}>
               <Box
                 className="items-center justify-center rounded-full bg-black shadow-xl"
-                style={{ width: 200, height: 200 }}
+                style={{ width: 160, height: 160 }}
               >
-                <Feather name="check" size={80} color="#FFFFFF" />
+                <Feather name="check" size={64} color="#FFFFFF" />
               </Box>
             </Pressable>
           ) : (
             <Pressable onPress={onOpenCamera}>
               <Box
                 className="items-center justify-center rounded-full bg-black shadow-2xl"
-                style={{ width: 200, height: 200 }}
+                style={{ width: 160, height: 160 }}
               >
-                <Feather name="plus" size={100} color="#FFFFFF" />
+                <Feather name="plus" size={80} color="#FFFFFF" />
               </Box>
             </Pressable>
           )}

@@ -123,8 +123,8 @@ export const getDummyStats = (year: number, month: number, photos: PhotoEntry[] 
 // 기본 미션 테마 목록
 const DEFAULT_THEMES = [
   '오늘의 하늘',
-  '발걸음이 멈춘 곳',
-  '창문 밖 풍경',
+  '발걸음이\n멈춘\n곳',
+  '오늘 창문 밖\n풍경은\n어땠나요?',
   '오늘 먹은 것',
   '지금 내 앞에 있는 것',
   '오늘의 색깔',
