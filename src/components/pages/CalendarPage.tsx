@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { FortuneData } from '../types/fortune';
+import { FortuneData } from '@/types/fortune';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Props {
@@ -22,7 +22,7 @@ interface Props {
   onPrev: () => void;
   fortune: FortuneData | null;
   loading: boolean;
-  onOpenSettings: () => void; // ✅ 필수로
+  onOpenSettings: () => void;
 }
 
 const WEEKDAY_HANJA = ['日', '月', '火', '水', '木', '金', '土'];
@@ -288,7 +288,7 @@ const CalendarPage: React.FC<Props> = ({
 
       <View
         className="z-10 bg-white px-4"
-        style={{ paddingTop: insets.top + 8 }} // ✅ 노치 / 다이나믹 아일랜드 대응
+        style={{ paddingTop: insets.top + 8 }}
       >
         {/* 상단 커스텀 헤더 */}
         <View className="flex-row items-center justify-between mb-2">
@@ -363,7 +363,7 @@ const CalendarPage: React.FC<Props> = ({
             useNativeDriver: true,
           })}
           contentContainerStyle={{
-            paddingBottom: 40, // 👈 원하는 만큼
+            paddingBottom: 40,
           }}
         >
           <View style={{ height: pageHeight }} className="relative bg-white px-8 pb-28 pt-6">
@@ -467,34 +467,34 @@ const CalendarPage: React.FC<Props> = ({
 
               {fortune ? (
                 <>
-                  <FortuneItem 
-                    icon="dollar-sign" 
-                    label="재물운" 
+                  <FortuneItem
+                    icon="dollar-sign"
+                    label="재물운"
                     value={fortune.wealth}
                     iconColor="#d97706"
                     bgColor="#fef3c7"
                   />
-                  <FortuneItem 
-                    icon="heart" 
-                    label="애정운" 
+                  <FortuneItem
+                    icon="heart"
+                    label="애정운"
                     value={fortune.love}
                     iconColor="#dc2626"
                     bgColor="#fee2e2"
                   />
-                  <FortuneItem 
-                    icon="award" 
-                    label="성공운" 
+                  <FortuneItem
+                    icon="award"
+                    label="성공운"
                     value={fortune.success}
                     iconColor="#7c3aed"
                     bgColor="#ede9fe"
                   />
-                  <FortuneItem 
-                    icon="zap" 
-                    label="추천 행동" 
+                  <FortuneItem
+                    icon="zap"
+                    label="추천 행동"
                     value={fortune.action}
                     iconColor="#059669"
                     bgColor="#d1fae5"
-                    isLast 
+                    isLast
                   />
                 </>
               ) : (
@@ -524,7 +524,7 @@ interface FortuneItemProps {
 const FortuneItem: React.FC<FortuneItemProps> = ({ icon, label, value, iconColor, bgColor, isLast }) => (
   <View className={`py-4 ${isLast ? '' : 'border-b border-gray-200'}`}>
     <View className="mb-2 flex-row items-center">
-      <View 
+      <View
         className="mr-3 h-9 w-9 items-center justify-center rounded-full"
         style={{ backgroundColor: bgColor }}
       >

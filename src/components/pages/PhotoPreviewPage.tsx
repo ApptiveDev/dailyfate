@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MissionData } from '../types/fortune';
+import { MissionData } from '@/types/fortune';
 import {
   Box,
   Text,
@@ -17,7 +17,7 @@ import {
   HStack,
   Center,
   Textarea,
-} from './ui';
+} from '../ui';
 
 interface Props {
   photoUri: string;

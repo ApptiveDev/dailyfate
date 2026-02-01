@@ -2,8 +2,8 @@ import React from 'react';
 import { Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MissionData } from '../types/fortune';
-import { Box, Text, HStack, Center, Card } from './ui';
+import { MissionData } from '@/types/fortune';
+import { Box, Text, HStack, Center, Card } from '../ui';
 
 interface Props {
   mission: MissionData | null;

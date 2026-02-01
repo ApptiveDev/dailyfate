@@ -2,7 +2,7 @@ import React from 'react';
 import { Dimensions, Pressable, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MissionData, PhotoEntry } from '../types/fortune';
+import { MissionData, PhotoEntry } from '@/types/fortune';
 import {
   Box,
   Text,
@@ -11,7 +11,7 @@ import {
   HStack,
   Center,
   Card,
-} from './ui';
+} from '../ui';
 
 interface Props {
   photo: PhotoEntry;

@@ -2,14 +2,14 @@ import React from 'react';
 import { Dimensions, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MissionData, MonthlyStats, PhotoEntry } from '../types/fortune';
+import { MissionData, MonthlyStats, PhotoEntry } from '@/types/fortune';
 import {
   Box,
   Text,
   VStack,
   HStack,
   Center,
-} from './ui';
+} from '../ui';
 
 interface Props {
   date: Date;
@@ -49,8 +49,8 @@ const TodayMissionPage: React.FC<Props> = ({
     <Box className="flex-1">
       {/* Upper Section - Black */}
       <Box
-        style={{ 
-          height: topHeight, 
+        style={{
+          height: topHeight,
           paddingTop: insets.top,
           backgroundColor: '#000000'
         }}
@@ -59,7 +59,7 @@ const TodayMissionPage: React.FC<Props> = ({
         {/* Header */}
         <HStack className="items-center justify-between pt-4">
           <Feather name="command" size={28} color="#FFFFFF" />
-          
+
           <Pressable onPress={onOpenSettings} hitSlop={16}>
             <Feather name="settings" size={24} color="#FFFFFF" />
           </Pressable>
@@ -84,7 +84,7 @@ const TodayMissionPage: React.FC<Props> = ({
 
       {/* Lower Section - White */}
       <Box
-        style={{ 
+        style={{
           height: bottomHeight,
           backgroundColor: '#FFFFFF'
         }}
@@ -97,7 +97,7 @@ const TodayMissionPage: React.FC<Props> = ({
         <Center className="flex-1 pb-20">
           {todayPhoto ? (
             <Pressable onPress={onViewPhoto}>
-              <Box 
+              <Box
                 className="items-center justify-center rounded-full bg-black shadow-xl"
                 style={{ width: 200, height: 200 }}
               >
@@ -106,7 +106,7 @@ const TodayMissionPage: React.FC<Props> = ({
             </Pressable>
           ) : (
             <Pressable onPress={onOpenCamera}>
-              <Box 
+              <Box
                 className="items-center justify-center rounded-full bg-black shadow-2xl"
                 style={{ width: 200, height: 200 }}
               >
