@@ -20,7 +20,7 @@ import { Box, Text, HStack, VStack, Center, Button, Heading } from '../ui';
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 50;
-const PHOTO_SIZE = SCREEN_WIDTH - 64;
+const PHOTO_SIZE = SCREEN_WIDTH - 48; // 좌우 px-6 패딩 고려
 
 interface Props {
   year: number;
@@ -106,42 +106,50 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
   };
 
   return (
-    <Box className="border-b border-neutral-100">
-      {/* 헤더 - 미션 제목 */}
+    <Box className="border-b border-neutral-800">
+      {/* 헤더 - 날짜 + 미션 */}
       <Pressable onPress={onToggle}>
-        <HStack className="py-4 px-4 items-center justify-between">
+        <VStack className="py-4 px-6">
+          <HStack className="items-center justify-between">
+            <Text
+              className={`text-2xl font-wanted-bold ${isExpanded ? 'text-white' : 'text-neutral-300'}`}
+              numberOfLines={1}
+            >
+              {date.getDate()}일 ({dayOfWeek})
+            </Text>
+            <Animated.View style={chevronStyle}>
+              <Feather
+                name="chevron-down"
+                size={24}
+                color={isExpanded ? '#fff' : '#737373'}
+              />
+            </Animated.View>
+          </HStack>
           <Text
-            className={`text-xl font-wanted-bold ${isExpanded ? 'text-black' : 'text-neutral-600'}`}
+            className={`text-sm mt-1 ${isExpanded ? 'text-neutral-400' : 'text-neutral-500'}`}
             numberOfLines={1}
           >
             {truncatedMission}
           </Text>
-          <Animated.View style={chevronStyle}>
-            <Feather
-              name="chevron-down"
-              size={20}
-              color={isExpanded ? '#000' : '#a3a3a3'}
-            />
-          </Animated.View>
-        </HStack>
+        </VStack>
       </Pressable>
 
       {/* 확장 콘텐츠 */}
       <Animated.View style={contentStyle}>
-        <Box className="px-4 pb-4">
+        <Box className="px-6 pb-6">
           {/* 메타데이터 */}
-          <Text className="text-neutral-400 text-sm font-wanted-regular mb-3">
-            {date.getMonth() + 1}월 {date.getDate()}일 ({dayOfWeek}), {date.getFullYear()}년 — {formatTime(createdAt)}
+          <Text className="text-neutral-500 text-xs font-wanted-regular mb-4">
+            {date.getFullYear()}년 {date.getMonth() + 1}월 {date.getDate()}일 — {formatTime(createdAt)}
           </Text>
 
           {/* 사진 */}
           <Box
-            className="rounded-2xl overflow-hidden bg-neutral-100"
+            className="rounded-2xl overflow-hidden bg-neutral-800"
             style={{ width: PHOTO_SIZE, height: PHOTO_SIZE }}
           >
             {photo.photoUri.startsWith('dummy://') ? (
               <Center className="flex-1">
-                <Feather name="image" size={48} color="#d4d4d4" />
+                <Feather name="image" size={48} color="#525252" />
               </Center>
             ) : (
               <Image
@@ -164,6 +172,7 @@ const CalendarPage: React.FC<Props> = ({
   stats,
   onPrevMonth,
   onNextMonth,
+  onSelectPhoto,
   onSelectEmptyDay,
   onCreateAlbum,
 }) => {
@@ -255,14 +264,14 @@ const CalendarPage: React.FC<Props> = ({
     transform: [{ translateX: translateX.value * 0.3 }],
   }));
 
-  // Handle day cell press - 아코디언 토글
+  // Handle day cell press - 상세 화면 열기
   const handleDayPress = useCallback(
     (date: Date | null, photo: PhotoEntry | null) => {
       if (!date) return;
 
       if (photo) {
-        // 사진이 있는 날 클릭 시 아코디언 토글
-        setExpandedId((prev) => (prev === photo.id ? null : photo.id));
+        // 사진이 있는 날 클릭 시 상세 화면 열기
+        onSelectPhoto(photo);
       } else {
         // 사진이 없는 날 클릭 시 해당 날짜로 이동
         const today = new Date();
@@ -275,7 +284,7 @@ const CalendarPage: React.FC<Props> = ({
         }
       }
     },
-    [onSelectEmptyDay]
+    [onSelectPhoto, onSelectEmptyDay]
   );
 
   // 아코디언 토글 핸들러
@@ -309,7 +318,7 @@ const CalendarPage: React.FC<Props> = ({
   }, []);
 
   return (
-    <Box className="flex-1 bg-white">
+    <Box className="flex-1 bg-black">
       {/* Header */}
       <Box
         className="bg-white px-6"
@@ -371,11 +380,12 @@ const CalendarPage: React.FC<Props> = ({
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[{ flex: 1 }, animatedStyle]}>
           <ScrollView
-            className="flex-1 px-4"
+            className="flex-1"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 120 }}
+            contentContainerStyle={{ paddingBottom: 100 }}
           >
             {/* Calendar Grid */}
+            <Box className="bg-white px-4">
             <Box className="flex-row flex-wrap justify-between">
               {calendarDays.map((dayData, index) => {
                 const { date, photo } = dayData;
@@ -384,7 +394,6 @@ const CalendarPage: React.FC<Props> = ({
                 const isSunday = dayOfWeek === 6;
                 const todayFlag = isToday(date);
                 const futureFlag = isFuture(date);
-                const isSelected = photo && expandedId === photo.id;
 
                 return (
                   <Pressable
@@ -401,7 +410,7 @@ const CalendarPage: React.FC<Props> = ({
                       <VStack className="items-center">
                         <Box
                           className={`rounded-lg overflow-hidden ${
-                            isSelected ? 'border-2 border-black' : todayFlag ? 'border-2 border-neutral-300' : ''
+                            todayFlag ? 'border-2 border-black' : ''
                           } ${futureFlag ? 'opacity-30' : ''}`}
                           style={{
                             width: cellSize - 4,
@@ -432,9 +441,7 @@ const CalendarPage: React.FC<Props> = ({
 
                         <Text
                           className={`text-xs mt-1 ${
-                            isSelected
-                              ? 'font-wanted-bold text-black'
-                              : todayFlag
+                            todayFlag
                               ? 'font-wanted-bold text-black'
                               : futureFlag
                               ? 'font-wanted-regular text-neutral-300'
@@ -453,10 +460,11 @@ const CalendarPage: React.FC<Props> = ({
                 );
               })}
             </Box>
+            </Box>
 
             {/* Mission Accordion List */}
             {sortedPhotos.length > 0 && (
-              <Box className="mt-4 mx-2 bg-neutral-50 rounded-2xl overflow-hidden">
+              <Box className="bg-black" style={{ minHeight: 500 }}>
                 {sortedPhotos.map((photo) => {
                   const mission = getMissionByKey(photo.date);
                   return (
@@ -475,18 +483,25 @@ const CalendarPage: React.FC<Props> = ({
         </Animated.View>
       </GestureDetector>
 
-      {/* Create Album Button */}
+      {/* Create Album Button - Float */}
       <Box
-        className="absolute left-0 right-0 px-6"
-        style={{ bottom: insets.bottom + 80 }}
+        className="absolute left-6 right-6"
+        style={{ bottom: 16 }}
       >
         <Button
           onPress={onCreateAlbum}
-          className="bg-black rounded-full py-4"
+          className="bg-white rounded-full py-4"
+          style={{
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+          }}
         >
           <HStack className="items-center justify-center" space="sm">
-            <Feather name="download" size={18} color="#fff" />
-            <Text className="text-white font-wanted-semibold">
+            <Feather name="download" size={18} color="#000" />
+            <Text className="text-black font-wanted-semibold">
               이번 달 앨범 만들기
             </Text>
           </HStack>
