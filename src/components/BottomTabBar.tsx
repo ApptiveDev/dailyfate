@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Box, HStack, Center } from './ui';
 
-export type TabType = 'today' | 'album' | 'profile';
+export type TabType = 'today' | 'calendar' | 'album' | 'profile';
 
 interface TabItem {
   key: TabType;
@@ -18,6 +18,7 @@ interface Props {
 
 const TABS: TabItem[] = [
   { key: 'today', icon: 'sun' },
+  { key: 'calendar', icon: 'calendar' },
   { key: 'album', icon: 'grid' },
   { key: 'profile', icon: 'user' },
 ];
@@ -43,7 +44,7 @@ const BottomTabBar: React.FC<Props> = ({ activeTab, onTabPress }) => {
                 <Center
                   className="rounded-full"
                   style={{
-                    width: 52,
+                    width: 48,
                     height: 44,
                     backgroundColor: isActive ? '#fff' : 'transparent',
                   }}
