@@ -1,12 +1,18 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import {
+  documentDirectory,
+  getInfoAsync,
+  makeDirectoryAsync,
+  copyAsync,
+  deleteAsync,
+} from 'expo-file-system/legacy';
 
 import type { PhotoEntry } from '@/types';
 import { DUMMY_PHOTOS } from '@/data/mockData';
 
 const PHOTOS_STORAGE_KEY = '@dailyfate_photos';
-const PHOTOS_DIRECTORY = `${FileSystem.documentDirectory}photos/`;
+const PHOTOS_DIRECTORY = `${documentDirectory ?? ''}photos/`;
 
 interface PhotoContextValue {
   photos: PhotoEntry[];
@@ -27,9 +33,9 @@ export const PhotoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Ensure photos directory exists
   const ensureDirectory = useCallback(async () => {
-    const dirInfo = await FileSystem.getInfoAsync(PHOTOS_DIRECTORY);
+    const dirInfo = await getInfoAsync(PHOTOS_DIRECTORY);
     if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(PHOTOS_DIRECTORY, { intermediates: true });
+      await makeDirectoryAsync(PHOTOS_DIRECTORY, { intermediates: true });
     }
   }, []);
 
@@ -45,7 +51,7 @@ export const PhotoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const validPhotos = await Promise.all(
             parsedPhotos.map(async (photo) => {
               if (photo.photoUri.startsWith('file://')) {
-                const fileInfo = await FileSystem.getInfoAsync(photo.photoUri);
+                const fileInfo = await getInfoAsync(photo.photoUri);
                 return fileInfo.exists ? photo : null;
               }
               return photo;
@@ -82,7 +88,7 @@ export const PhotoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const extension = tempUri.split('.').pop() || 'jpg';
     const localPath = `${PHOTOS_DIRECTORY}${photoId}.${extension}`;
 
-    await FileSystem.copyAsync({
+    await copyAsync({
       from: tempUri,
       to: localPath,
     });
@@ -129,9 +135,9 @@ export const PhotoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Delete the image file if it's a local file
     if (photoToRemove?.photoUri.startsWith('file://')) {
       try {
-        await FileSystem.deleteAsync(photoToRemove.photoUri, { idempotent: true });
+        await deleteAsync(photoToRemove.photoUri, { idempotent: true });
         if (photoToRemove.thumbnailUri?.startsWith('file://')) {
-          await FileSystem.deleteAsync(photoToRemove.thumbnailUri, { idempotent: true });
+          await deleteAsync(photoToRemove.thumbnailUri, { idempotent: true });
         }
       } catch (error) {
         console.error('Failed to delete photo file:', error);

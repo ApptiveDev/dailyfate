@@ -93,7 +93,7 @@ const MonthlyAlbumDetailPage: React.FC<Props> = ({
             <Text className="text-neutral-500 text-xs font-wanted-regular">
               {year}년
             </Text>
-            <Heading size="lg" className="font-wanted-bold">
+            <Heading className="text-xl font-wanted-bold">
               {month}월 앨범
             </Heading>
           </VStack>
@@ -113,13 +113,13 @@ const MonthlyAlbumDetailPage: React.FC<Props> = ({
             {sortedPhotos.length > 0 ? (
               <Box className="flex-row flex-wrap">
                 {sortedPhotos.map((photo, index) => {
-                  const size = `${100 / gridColumns}%`;
+                  const widthPercent = `${100 / gridColumns}%` as const;
                   return (
                     <Pressable
                       key={photo.id}
                       onPress={() => onSelectPhoto(photo)}
                       style={{
-                        width: size,
+                        width: widthPercent as unknown as number,
                         aspectRatio: 1,
                         padding: 2,
                       }}

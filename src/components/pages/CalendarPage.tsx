@@ -185,7 +185,7 @@ const CalendarPage: React.FC<Props> = ({
             <Text className="text-neutral-400 text-xs font-wanted-semibold">
               {year}년
             </Text>
-            <Heading size="xl" className="font-wanted-bold">
+            <Heading className="text-2xl font-wanted-bold">
               {month}월
             </Heading>
           </VStack>

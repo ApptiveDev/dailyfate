@@ -110,7 +110,7 @@ const ProfilePage: React.FC<Props> = ({
           style={{ paddingTop: insets.top + 16, paddingBottom: 32 }}
         >
           <HStack className="justify-between items-center mb-8">
-            <Heading size="lg" className="text-white font-wanted-bold">
+            <Heading className="text-xl text-white font-wanted-bold">
               프로필
             </Heading>
             <Pressable onPress={onOpenSettings} hitSlop={12}>
