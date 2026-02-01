@@ -37,20 +37,19 @@ interface MonthlyStatData {
   successRate: number | string;
 }
 
-const MONTH_COLORS: Record<number, { bg: string; text: string; accent: string }> = {
-  1: { bg: '#E5EBF0', text: '#2C4A5A', accent: '#5A8A9E' },
-  2: { bg: '#E8F0E8', text: '#3A4A33', accent: '#6B8B5E' },
-  3: { bg: '#D8EAD4', text: '#3A4A33', accent: '#6B8B5E' },
-  4: { bg: '#D5E5D8', text: '#3A4A33', accent: '#6B8B5E' },
-  5: { bg: '#D8E8D0', text: '#3A4A33', accent: '#6B8B5E' },
-  6: { bg: '#F0E8D0', text: '#4A4833', accent: '#8B8655' },
-  7: { bg: '#EDE4D4', text: '#4A3728', accent: '#8B7355' },
-  8: { bg: '#E8E4D8', text: '#4A4039', accent: '#7D7067' },
-  9: { bg: '#E8E0D8', text: '#4A4039', accent: '#7D7067' },
-  10: { bg: '#E5DCD4', text: '#4A4039', accent: '#7D7067' },
-  11: { bg: '#E2DDD8', text: '#4A4039', accent: '#7D7067' },
-  12: { bg: '#DCE4EB', text: '#2C4A5A', accent: '#5A8A9E' },
-};
+const MONTH_COLORS_GRADIENT = Array.from({ length: 12 }, (_, i) => {
+  // 1월(흰색) -> 12월(검정) 그라데이션 계산
+  // 255 (white) to 20 (dark gray/black)
+  const value = Math.floor(255 - (i * (235 / 11)));
+  const hex = value.toString(16).padStart(2, '0');
+  const color = `#${hex}${hex}${hex}`;
+  
+  // 배경색에 따른 텍스트 색상 결정 (밝으면 검정, 어두우면 흰색)
+  const textColor = value > 128 ? '#000000' : '#FFFFFF';
+  const subTextColor = value > 128 ? '#666666' : '#A3A3A3';
+  
+  return { bg: color, text: textColor, sub: subTextColor };
+});
 
 const MONTH_NAMES_KR = [
   '1월', '2월', '3월', '4월', '5월', '6월',
@@ -115,9 +114,9 @@ const WalletCard: React.FC<WalletCardProps & { insets: any }> = ({
   onDetail,
   insets,
 }) => {
-  const color = MONTH_COLORS[item.month];
   const isExpanded = expandedIndex === index;
   const hasAnyExpanded = expandedIndex !== null;
+  const colors = MONTH_COLORS_GRADIENT[item.month - 1];
 
   const animatedStyle = useAnimatedStyle(() => {
     const baseTranslateY = index * STACK_SPACING;
@@ -164,7 +163,7 @@ const WalletCard: React.FC<WalletCardProps & { insets: any }> = ({
 
   return (
     <Animated.View style={[styles.cardWrapper, animatedStyle]}>
-      <View style={[styles.card, { backgroundColor: color.bg }]}>
+      <View style={[styles.card, { backgroundColor: colors.bg }]}>
         {/* 카드 탭(확장/축소) 영역만 Pressable — 상세 보기 버튼과 터치 영역 분리 */}
         <Pressable
           onPress={onPress}
@@ -174,7 +173,7 @@ const WalletCard: React.FC<WalletCardProps & { insets: any }> = ({
         >
           <View style={styles.cardHeader}>
             <View style={styles.headerLeft}>
-              <Text style={[styles.cardTitle, { color: color.text }]}>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>
                 {item.year} {MONTH_NAMES_KR[item.month - 1]}
               </Text>
             </View>
@@ -182,20 +181,20 @@ const WalletCard: React.FC<WalletCardProps & { insets: any }> = ({
 
           <View style={styles.cardBody}>
             <View style={styles.mainInfo}>
-              <Text style={[styles.rateValue, { color: color.text }]}>
+              <Text style={[styles.rateValue, { color: colors.text }]}>
                 {String(item.successRate)}%
               </Text>
-              <Text style={[styles.rateLabel, { color: color.accent }]}>
+              <Text style={[styles.rateLabel, { color: '#FF5C00' }]}>
                 성공률
               </Text>
             </View>
 
             <View style={styles.footerInfo}>
               <View style={styles.streakInfo}>
-                <Text style={[styles.streakValue, { color: color.text }]}>
+                <Text style={[styles.streakValue, { color: colors.text }]}>
                   {item.streakDays}일
                 </Text>
-                <Text style={[styles.streakLabel, { color: color.accent }]}>
+                <Text style={[styles.streakLabel, { color: colors.sub }]}>
                   연속 달성
                 </Text>
               </View>
@@ -206,18 +205,18 @@ const WalletCard: React.FC<WalletCardProps & { insets: any }> = ({
         {/* 확장 시 상세 보기 버튼 — 별도 Pressable이라 카드 탭과 겹치지 않음 */}
         {isExpanded && (
           <Pressable
-            style={[styles.detailButton, { borderColor: color.accent }]}
+            style={[styles.detailButton, { borderColor: '#FF5C00' }]}
             onPress={onDetail}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityLabel="월별 상세 보기"
             accessibilityRole="button"
           >
-            <Text style={[styles.detailButtonText, { color: color.text }]}>상세 보기</Text>
-            <Feather name="chevron-right" size={16} color={color.text} />
+            <Text style={[styles.detailButtonText, { color: colors.text }]}>상세 보기</Text>
+            <Feather name="chevron-right" size={16} color="#FF5C00" />
           </Pressable>
         )}
 
-        <View style={[styles.cardBorder, { borderColor: 'rgba(0,0,0,0.05)' }]} />
+        <View style={[styles.cardBorder, { borderColor: 'rgba(0,0,0,0.08)' }]} />
       </View>
     </Animated.View>
   );
@@ -319,7 +318,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   screenBg: {
-    backgroundColor: '#FAF8F5',
+    backgroundColor: '#FFFFFF',
   },
   screenHeader: {
     flexDirection: 'row',
@@ -328,6 +327,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 32, // 헤더와 카드 사이 여백
     zIndex: 2000,
+    backgroundColor: '#FFFFFF',
   },
   screenSubtitle: {
     fontSize: 13,
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginBottom: 100, 
     overflow: 'hidden',
-    backgroundColor: '#FAF8F5', // 배경색 명시
+    backgroundColor: '#FFFFFF',
   },
   scrollView: {
     flex: 1,
@@ -376,13 +376,15 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     height: CARD_HEIGHT,
-    borderRadius: 24, // 가이드라인 lg(24px) 반영
+    borderRadius: 24,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
     shadowRadius: 16,
-    elevation: 8,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)', // 어두운 배경에 맞는 테두리
   },
   cardHeader: {
     flexDirection: 'row',

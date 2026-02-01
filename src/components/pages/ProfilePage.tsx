@@ -335,7 +335,7 @@ const ProfilePage: React.FC<Props> = ({
                   현재 연속
                 </Text>
                 <HStack className="items-center" space="xs">
-                  <Feather name="zap" size={18} color="#f59e0b" />
+                  <Feather name="zap" size={18} color="#FF5C00" />
                   <Text className="text-black text-2xl font-wanted-bold">
                     {stats.totalStreak}
                   </Text>

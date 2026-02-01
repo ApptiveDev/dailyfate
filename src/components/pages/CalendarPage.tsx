@@ -15,12 +15,18 @@ import Animated, {
 
 import type { MonthlyStats, PhotoEntry, MissionData } from '@/types';
 import { useMission } from '@/providers/MissionProvider';
-import { Box, Text, HStack, VStack, Center, Button, Heading } from '../ui';
+import { Box, Text, HStack, VStack, Center } from '../ui';
 
-const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SWIPE_THRESHOLD = 50;
-const PHOTO_SIZE = SCREEN_WIDTH - 48; // 좌우 px-6 패딩 고려
+const PHOTO_SIZE = SCREEN_WIDTH - 48;
+
+// 요일 한글 약자
+const WEEKDAYS_KR = ['월', '화', '수', '목', '금', '토', '일'];
+const MONTH_NAMES_KR = [
+  '1월', '2월', '3월', '4월', '5월', '6월',
+  '7월', '8월', '9월', '10월', '11월', '12월'
+];
 
 interface Props {
   year: number;
@@ -58,7 +64,7 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
     const height = interpolate(
       animationValue.value,
       [0, 1],
-      [0, PHOTO_SIZE + 80],
+      [0, PHOTO_SIZE + 40],
       Extrapolation.CLAMP
     );
     const opacity = interpolate(
@@ -75,81 +81,55 @@ const AccordionItem: React.FC<AccordionItemProps> = ({
     };
   });
 
-  const chevronStyle = useAnimatedStyle(() => {
-    const rotation = interpolate(
-      animationValue.value,
-      [0, 1],
-      [0, 180],
-      Extrapolation.CLAMP
-    );
-
-    return {
-      transform: [{ rotate: `${rotation}deg` }],
-    };
-  });
-
   const date = new Date(photo.date);
-  const createdAt = photo.createdAt ? new Date(photo.createdAt) : date;
-  const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][date.getDay()];
-
-  // 미션 텍스트 truncate (최대 15자)
-  const truncatedMission = mission.theme.length > 15
-    ? `${mission.theme.slice(0, 15)}...`
-    : mission.theme;
-
-  const formatTime = (d: Date) => {
-    const hours = d.getHours();
+  const dayOfWeek = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][date.getDay()];
+  
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    let hours = d.getHours();
     const minutes = String(d.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'pm' : 'am';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${minutes}${ampm}`;
+    const ampm = hours >= 12 ? '오후' : '오전';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${ampm} ${hours}:${minutes}`;
   };
 
   return (
-    <Box className="border-b border-neutral-800">
-      {/* 헤더 - 날짜 + 미션 */}
+    <Box className="border-b border-neutral-100">
       <Pressable onPress={onToggle}>
-        <VStack className="py-4 px-6">
-          <HStack className="items-center justify-between">
-            <Text
-              className={`text-2xl font-wanted-bold ${isExpanded ? 'text-white' : 'text-neutral-300'}`}
-              numberOfLines={1}
+        <VStack className="py-8 px-10">
+          <HStack className="items-start justify-between">
+            <Text 
+              className="text-[32px] font-wanted-bold text-black leading-[38px] tracking-tighter flex-1 mr-4"
+              numberOfLines={2}
             >
-              {date.getDate()}일 ({dayOfWeek})
+              {mission.theme}
             </Text>
-            <Animated.View style={chevronStyle}>
-              <Feather
-                name="chevron-down"
-                size={24}
-                color={isExpanded ? '#fff' : '#737373'}
-              />
-            </Animated.View>
+            <VStack className="items-end">
+              <Text className="text-sm font-wanted-semibold text-brand-orange mb-1">
+                {date.getDate()}일
+              </Text>
+            </VStack>
           </HStack>
-          <Text
-            className={`text-sm mt-1 ${isExpanded ? 'text-neutral-400' : 'text-neutral-500'}`}
-            numberOfLines={1}
-          >
-            {truncatedMission}
-          </Text>
+          {isExpanded && (
+            <VStack className="mt-4">
+              <Text className="text-xs font-wanted-medium text-neutral-400">
+                {date.getFullYear()}년 — {formatTime(photo.date)}
+              </Text>
+            </VStack>
+          )}
         </VStack>
       </Pressable>
 
-      {/* 확장 콘텐츠 */}
       <Animated.View style={contentStyle}>
-        <Box className="px-6 pb-6">
-          {/* 메타데이터 */}
-          <Text className="text-neutral-500 text-xs font-wanted-regular mb-4">
-            {date.getFullYear()}년 {date.getMonth() + 1}월 {date.getDate()}일 — {formatTime(createdAt)}
-          </Text>
-
-          {/* 사진 */}
+        <Box className="px-10 pb-10">
           <Box
-            className="rounded-2xl overflow-hidden bg-neutral-800"
-            style={{ width: PHOTO_SIZE, height: PHOTO_SIZE }}
+            className="rounded-3xl overflow-hidden bg-neutral-50"
+            style={{ width: PHOTO_SIZE - 32, height: PHOTO_SIZE - 32 }}
           >
             {photo.photoUri.startsWith('dummy://') ? (
               <Center className="flex-1">
-                <Feather name="image" size={48} color="#525252" />
+                <Feather name="image" size={48} color="#D1CFCA" />
               </Center>
             ) : (
               <Image
@@ -169,27 +149,16 @@ const CalendarPage: React.FC<Props> = ({
   year,
   month,
   photos,
-  stats,
   onPrevMonth,
   onNextMonth,
   onSelectPhoto,
   onSelectEmptyDay,
-  onCreateAlbum,
 }) => {
   const insets = useSafeAreaInsets();
   const translateX = useSharedValue(0);
   const { getMissionByKey } = useMission();
-
-  // 확장된 아이템 ID 상태
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // Calculate achievement rate
-  const achievementRate = useMemo(() => {
-    if (stats.totalDays === 0) return 0;
-    return Math.round((stats.completedDays / stats.totalDays) * 100);
-  }, [stats]);
-
-  // Create a map of date -> photo for quick lookup
   const photoMap = useMemo(() => {
     const map: Record<string, PhotoEntry> = {};
     photos.forEach((photo) => {
@@ -198,14 +167,12 @@ const CalendarPage: React.FC<Props> = ({
     return map;
   }, [photos]);
 
-  // Sort photos by date for accordion list
   const sortedPhotos = useMemo(() => {
     return [...photos].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
   }, [photos]);
 
-  // Generate calendar grid
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month - 1, 1);
     const lastDay = new Date(year, month, 0);
@@ -236,7 +203,6 @@ const CalendarPage: React.FC<Props> = ({
     return days;
   }, [year, month, photoMap]);
 
-  // Swipe gesture for month navigation
   const handleSwipeLeft = useCallback(() => {
     onNextMonth();
     setExpandedId(null);
@@ -248,6 +214,8 @@ const CalendarPage: React.FC<Props> = ({
   }, [onPrevMonth]);
 
   const panGesture = Gesture.Pan()
+    .activeOffsetX([-SWIPE_THRESHOLD, SWIPE_THRESHOLD])
+    .failOffsetY([-10, 10])
     .onUpdate((event) => {
       translateX.value = event.translationX;
     })
@@ -264,21 +232,16 @@ const CalendarPage: React.FC<Props> = ({
     transform: [{ translateX: translateX.value * 0.3 }],
   }));
 
-  // Handle day cell press - 상세 화면 열기
   const handleDayPress = useCallback(
     (date: Date | null, photo: PhotoEntry | null) => {
       if (!date) return;
-
       if (photo) {
-        // 사진이 있는 날 클릭 시 상세 화면 열기
         onSelectPhoto(photo);
       } else {
-        // 사진이 없는 날 클릭 시 해당 날짜로 이동
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const targetDate = new Date(date);
         targetDate.setHours(0, 0, 0, 0);
-
         if (targetDate <= today) {
           onSelectEmptyDay(date);
         }
@@ -286,21 +249,6 @@ const CalendarPage: React.FC<Props> = ({
     },
     [onSelectPhoto, onSelectEmptyDay]
   );
-
-  // 아코디언 토글 핸들러
-  const handleAccordionToggle = useCallback((photoId: string) => {
-    setExpandedId((prev) => (prev === photoId ? null : photoId));
-  }, []);
-
-  const isToday = useCallback((date: Date | null) => {
-    if (!date) return false;
-    const today = new Date();
-    return (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
-    );
-  }, []);
 
   const isFuture = useCallback((date: Date | null) => {
     if (!date) return false;
@@ -312,88 +260,66 @@ const CalendarPage: React.FC<Props> = ({
   }, []);
 
   const cellSize = useMemo(() => {
-    const padding = 32;
-    const gap = 8;
+    const padding = 48;
+    const gap = 12;
     return (SCREEN_WIDTH - padding - gap * 6) / 7;
   }, []);
 
   return (
-    <Box className="flex-1 bg-black">
-      {/* Header */}
-      <Box
-        className="bg-white px-6"
-        style={{ paddingTop: insets.top + 16 }}
+    <Box className="flex-1 bg-white">
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: insets.top + 40, paddingBottom: 60 }}
       >
-        <HStack className="justify-between items-center mb-4">
-          <Box style={{ width: 40 }} />
-          <VStack className="items-center">
-            <Text className="text-neutral-400 text-xs font-wanted-semibold">
-              {year}년
-            </Text>
-            <Heading className="text-2xl font-wanted-bold">
-              {month}월
-            </Heading>
-          </VStack>
-          <Box style={{ width: 40 }} />
-        </HStack>
-
-        {/* Navigation & Achievement Rate */}
-        <HStack className="justify-between items-center mb-6">
-          <HStack className="items-center" space="sm">
-            <Pressable onPress={() => { onPrevMonth(); setExpandedId(null); }} hitSlop={12}>
-              <Feather name="chevron-left" size={24} color="#000" />
-            </Pressable>
-            <Text className="text-neutral-500 text-sm font-wanted-regular">
-              {year}.{String(month).padStart(2, '0')}
-            </Text>
-            <Pressable onPress={() => { onNextMonth(); setExpandedId(null); }} hitSlop={12}>
-              <Feather name="chevron-right" size={24} color="#000" />
-            </Pressable>
-          </HStack>
-          <HStack className="items-center" space="xs">
-            <Text className="text-neutral-500 text-sm font-wanted-regular">
-              달성률
-            </Text>
-            <Text className="text-black text-lg font-wanted-bold">
-              {achievementRate}%
-            </Text>
-          </HStack>
-        </HStack>
-
-        {/* Weekday Headers */}
-        <HStack className="justify-between mb-2">
-          {WEEKDAYS.map((day, index) => (
-            <Center key={day} style={{ width: cellSize }}>
-              <Text
-                className={`text-xs font-wanted-semibold ${
-                  index === 5 ? 'text-blue-600' : index === 6 ? 'text-red-600' : 'text-neutral-400'
-                }`}
-              >
-                {day}
+        {/* Header Section */}
+        <Box className="px-10 mb-12">
+          <Text className="text-[100px] font-wanted-bold text-black leading-[100px] -ml-2">
+            {month}
+          </Text>
+          <VStack className="mt-4">
+            <HStack className="items-center justify-between mt-1">
+              <Text className="text-2xl font-wanted-regular text-neutral-400">
+                {year}년
               </Text>
-            </Center>
-          ))}
-        </HStack>
-      </Box>
+              <Text className="text-2xl font-wanted-regular text-black">
+                {['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][new Date().getDay()]}
+              </Text>
+            </HStack>
+          </VStack>
+        </Box>
 
-      {/* Calendar Grid with Swipe */}
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={[{ flex: 1 }, animatedStyle]}>
-          <ScrollView
-            className="flex-1"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 100 }}
-          >
-            {/* Calendar Grid */}
-            <Box className="bg-white px-4">
+        {/* Navigation Controls */}
+        <HStack className="px-10 mb-10" space="xl">
+          <Pressable onPress={onPrevMonth} hitSlop={20}>
+            <Feather name="chevron-left" size={24} color="#000" />
+          </Pressable>
+          <Pressable onPress={onNextMonth} hitSlop={20}>
+            <Feather name="chevron-right" size={24} color="#000" />
+          </Pressable>
+        </HStack>
+
+        {/* Calendar Grid */}
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[animatedStyle, { paddingHorizontal: 24, marginBottom: 60 }]}>
+            <HStack className="justify-between mb-6 px-2">
+              {WEEKDAYS_KR.map((day, i) => (
+                <Center key={`${day}-${i}`} style={{ width: cellSize }}>
+                  <Text className="text-[10px] font-wanted-medium text-neutral-400">
+                    {day}
+                  </Text>
+                </Center>
+              ))}
+            </HStack>
+
             <Box className="flex-row flex-wrap justify-between">
               {calendarDays.map((dayData, index) => {
                 const { date, photo } = dayData;
-                const dayOfWeek = index % 7;
-                const isSaturday = dayOfWeek === 5;
-                const isSunday = dayOfWeek === 6;
-                const todayFlag = isToday(date);
                 const futureFlag = isFuture(date);
+                const isToday = date && 
+                  date.getDate() === new Date().getDate() && 
+                  date.getMonth() === new Date().getMonth() && 
+                  date.getFullYear() === new Date().getFullYear();
 
                 return (
                   <Pressable
@@ -402,111 +328,56 @@ const CalendarPage: React.FC<Props> = ({
                     disabled={!date || futureFlag}
                     style={{
                       width: cellSize,
-                      height: cellSize + 20,
-                      marginBottom: 8,
+                      height: cellSize,
+                      marginBottom: 12,
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    {date && (
-                      <VStack className="items-center">
-                        <Box
-                          className={`rounded-lg overflow-hidden ${
-                            todayFlag ? 'border-2 border-black' : ''
-                          } ${futureFlag ? 'opacity-30' : ''}`}
-                          style={{
-                            width: cellSize - 4,
-                            height: cellSize - 4,
-                            backgroundColor: photo ? '#f5f5f5' : '#fafafa',
-                          }}
-                        >
-                          {photo ? (
-                            photo.photoUri.startsWith('dummy://') ? (
-                              <Center className="flex-1 bg-neutral-100">
-                                <Feather name="image" size={20} color="#a3a3a3" />
-                              </Center>
-                            ) : (
-                              <Image
-                                source={{ uri: photo.photoUri }}
-                                style={{ width: '100%', height: '100%' }}
-                                resizeMode="cover"
-                              />
-                            )
-                          ) : (
-                            <Center className="flex-1">
-                              {!futureFlag && (
-                                <Box className="w-1 h-1 rounded-full bg-neutral-200" />
-                              )}
-                            </Center>
-                          )}
-                        </Box>
-
-                        <Text
-                          className={`text-xs mt-1 ${
-                            todayFlag
-                              ? 'font-wanted-bold text-black'
-                              : futureFlag
-                              ? 'font-wanted-regular text-neutral-300'
-                              : isSunday
-                              ? 'font-wanted-regular text-red-600'
-                              : isSaturday
-                              ? 'font-wanted-regular text-blue-600'
-                              : 'font-wanted-regular text-neutral-600'
-                          }`}
-                        >
-                          {date.getDate()}
-                        </Text>
-                      </VStack>
-                    )}
+                    {date ? (
+                      <Box
+                        style={{
+                          width: cellSize - 4,
+                          height: cellSize - 4,
+                          borderRadius: 12,
+                          backgroundColor: isToday ? '#FF5C00' : (photo ? '#1A1A1A' : 'transparent'),
+                          borderWidth: !photo && !isToday ? 1 : 0,
+                          borderColor: '#F5F5F5',
+                        }}
+                      />
+                    ) : null}
                   </Pressable>
                 );
               })}
             </Box>
-            </Box>
+          </Animated.View>
+        </GestureDetector>
 
-            {/* Mission Accordion List */}
-            {sortedPhotos.length > 0 && (
-              <Box className="bg-black" style={{ minHeight: 500 }}>
-                {sortedPhotos.map((photo) => {
-                  const mission = getMissionByKey(photo.date);
-                  return (
-                    <AccordionItem
-                      key={photo.id}
-                      photo={photo}
-                      mission={mission}
-                      isExpanded={expandedId === photo.id}
-                      onToggle={() => handleAccordionToggle(photo.id)}
-                    />
-                  );
-                })}
-              </Box>
-            )}
-          </ScrollView>
-        </Animated.View>
-      </GestureDetector>
+        {/* Mission Accordion List (새로운 디자인에 맞춰 복구) */}
+        {sortedPhotos.length > 0 && (
+          <Box className="mt-10 border-t border-neutral-100">
+            {sortedPhotos.map((photo) => {
+              const mission = getMissionByKey(photo.date);
+              return (
+                <AccordionItem
+                  key={photo.id}
+                  photo={photo}
+                  mission={mission}
+                  isExpanded={expandedId === photo.id}
+                  onToggle={() => setExpandedId(expandedId === photo.id ? null : photo.id)}
+                />
+              );
+            })}
+          </Box>
+        )}
 
-      {/* Create Album Button - Float */}
-      <Box
-        className="absolute left-6 right-6"
-        style={{ bottom: 16 }}
-      >
-        <Button
-          onPress={onCreateAlbum}
-          className="bg-white rounded-full py-4"
-          style={{
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
-          }}
-        >
-          <HStack className="items-center justify-center" space="sm">
-            <Feather name="download" size={18} color="#000" />
-            <Text className="text-black font-wanted-semibold">
-              이번 달 앨범 만들기
-            </Text>
-          </HStack>
-        </Button>
-      </Box>
+        {/* Footer Text */}
+        <Center className="mt-20">
+          <Text className="text-[10px] font-wanted-medium text-neutral-400 tracking-[3px] uppercase">
+            LESS BUT BETTER
+          </Text>
+        </Center>
+      </ScrollView>
     </Box>
   );
 };

@@ -66,7 +66,7 @@ const TodayMissionPage: React.FC<Props> = ({
             <Text className="text-2xl text-neutral-500 font-wanted-regular">Loading...</Text>
           ) : (
             <VStack space="xs">
-              <Text className="text-[32px] font-wanted-bold text-neutral-400 leading-tight">
+              <Text className="text-[32px] font-wanted-bold text-brand-orange leading-tight">
                 {month}월 {day}일 ({WEEKDAY_KR[weekday]})
               </Text>
               <Text className="text-[42px] font-wanted-bold text-white leading-[48px]">
