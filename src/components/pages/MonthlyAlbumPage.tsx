@@ -1,18 +1,22 @@
-import React, { useCallback } from 'react';
-import { Pressable, StyleSheet, View, Dimensions } from 'react-native';
+import React, { useCallback, useState, useMemo } from 'react';
+import {
+  Pressable,
+  Dimensions,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
   withSpring,
-  interpolate,
   useSharedValue,
   useAnimatedScrollHandler,
-  SharedValue,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { MonthlyStats, PhotoEntry } from '@/types/fortune';
-import { Box, Text } from '../ui';
+import type { MonthlyStats, PhotoEntry } from '@/types/fortune';
+import { Box, Text, VStack, Heading } from '../ui';
 
 interface Props {
   year: number;
@@ -26,29 +30,27 @@ interface Props {
   onSelectMonth?: (year: number, month: number) => void;
 }
 
-// 월별 통계 데이터 타입
 interface MonthlyStatData {
   year: number;
   month: number;
   streakDays: number;
-  successRate: number;
+  successRate: number | string;
 }
 
-// 파스텔/뮤트 톤 색상 팔레트 (Apple Wallet 느낌)
-const CARD_COLORS: { bg: string; text: string; accent: string }[] = [
-  { bg: '#F5E6D3', text: '#4A3728', accent: '#8B7355' }, // 웜 베이지
-  { bg: '#E8D5C4', text: '#5C4033', accent: '#9D7B5B' }, // 토프
-  { bg: '#D4E5ED', text: '#2C4A5A', accent: '#5A8A9E' }, // 소프트 블루
-  { bg: '#E5DDD5', text: '#4A4039', accent: '#7D7067' }, // 그레이지
-  { bg: '#DDE8D5', text: '#3A4A33', accent: '#6B8B5E' }, // 세이지
-  { bg: '#EDD5D5', text: '#5A3A3A', accent: '#9E6B6B' }, // 더스티 로즈
-  { bg: '#D5DEE8', text: '#3A4455', accent: '#6B7D9E' }, // 슬레이트 블루
-  { bg: '#E8E5D5', text: '#4A4833', accent: '#8B8655' }, // 올리브
-  { bg: '#E0D5E8', text: '#4A3A55', accent: '#8B6B9E' }, // 라벤더
-  { bg: '#D5E8E5', text: '#335550', accent: '#5B9E8B' }, // 민트
-  { bg: '#F0E5D8', text: '#4D4035', accent: '#8A7560' }, // 카라멜
-  { bg: '#DBE5E0', text: '#354540', accent: '#608578' }, // 유칼립투스
-];
+const MONTH_COLORS: Record<number, { bg: string; text: string; accent: string }> = {
+  1: { bg: '#E5EBF0', text: '#2C4A5A', accent: '#5A8A9E' },
+  2: { bg: '#E8F0E8', text: '#3A4A33', accent: '#6B8B5E' },
+  3: { bg: '#D8EAD4', text: '#3A4A33', accent: '#6B8B5E' },
+  4: { bg: '#D5E5D8', text: '#3A4A33', accent: '#6B8B5E' },
+  5: { bg: '#D8E8D0', text: '#3A4A33', accent: '#6B8B5E' },
+  6: { bg: '#F0E8D0', text: '#4A4833', accent: '#8B8655' },
+  7: { bg: '#EDE4D4', text: '#4A3728', accent: '#8B7355' },
+  8: { bg: '#E8E4D8', text: '#4A4039', accent: '#7D7067' },
+  9: { bg: '#E8E0D8', text: '#4A4039', accent: '#7D7067' },
+  10: { bg: '#E5DCD4', text: '#4A4039', accent: '#7D7067' },
+  11: { bg: '#E2DDD8', text: '#4A4039', accent: '#7D7067' },
+  12: { bg: '#DCE4EB', text: '#2C4A5A', accent: '#5A8A9E' },
+};
 
 const MONTH_NAMES_KR = [
   '1월', '2월', '3월', '4월', '5월', '6월',
@@ -56,161 +58,181 @@ const MONTH_NAMES_KR = [
 ];
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH - 40;
-const CARD_HEIGHT = 140;
-const CARD_OVERLAP = 65; // 겹치는 높이
+const CARD_WIDTH = SCREEN_WIDTH; // 화면 가로 꽉 차도록 수정
+const CARD_HEIGHT = 200;
+const STACK_SPACING = 60;
 
 const springConfig = {
-  damping: 18,
-  stiffness: 100,
+  damping: 22,
+  stiffness: 160,
   mass: 0.8,
 };
 
-// Mock 데이터 생성 (실제 데이터 소스가 없으므로)
-const generateMockStats = (): MonthlyStatData[] => {
+function generateMockStats(): MonthlyStatData[] {
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1;
-
   const stats: MonthlyStatData[] = [];
 
-  // 최근 12개월 데이터 생성 (최신 월이 위로)
   for (let i = 0; i < 12; i++) {
     let year = currentYear;
     let month = currentMonth - i;
-
     if (month <= 0) {
       month += 12;
       year -= 1;
     }
-
-    // 랜덤하지만 일관된 데이터 생성 (시드 기반)
     const seed = year * 100 + month;
-    const streakDays = Math.floor((seed % 15) + 1);
-    const successRate = parseFloat((40 + (seed % 50) + Math.random() * 10).toFixed(1));
-
+    const streakDays = (seed % 20) + 3;
+    const rawRate = 50 + (seed % 40) + (seed % 10) * 0.5;
+    const successRate = Math.min(rawRate, 99.9);
     stats.push({
       year,
       month,
       streakDays,
-      successRate: Math.min(successRate, 100),
+      successRate,
     });
   }
-
   return stats;
-};
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-
-interface CardItemProps {
-  item: MonthlyStatData;
-  index: number;
-  scrollY: SharedValue<number>;
-  totalCount: number;
-  onPress: (item: MonthlyStatData) => void;
 }
 
-const CardItem: React.FC<CardItemProps> = ({ item, index, scrollY, totalCount, onPress }) => {
-  const color = CARD_COLORS[item.month - 1];
-  const inputRange = [
-    (index - 1) * CARD_OVERLAP,
-    index * CARD_OVERLAP,
-    (index + 1) * CARD_OVERLAP,
-  ];
+interface WalletCardProps {
+  item: MonthlyStatData;
+  index: number;
+  totalCount: number;
+  expandedIndex: number | null;
+  scrollY: SharedValue<number>;
+  onPress: () => void;
+  onDetail: () => void;
+}
+
+const WalletCard: React.FC<WalletCardProps & { insets: any }> = ({
+  item,
+  index,
+  totalCount,
+  expandedIndex,
+  scrollY,
+  onPress,
+  onDetail,
+  insets,
+}) => {
+  const color = MONTH_COLORS[item.month];
+  const isExpanded = expandedIndex === index;
+  const hasAnyExpanded = expandedIndex !== null;
 
   const animatedStyle = useAnimatedStyle(() => {
-    const scale = interpolate(
-      scrollY.value,
-      inputRange,
-      [0.95, 1, 0.98],
-      'clamp'
-    );
+    const baseTranslateY = index * STACK_SPACING;
+    let translateY = baseTranslateY;
+    let scale = 1;
+    let zIndex = index;
+    let opacity = 1;
 
-    const opacity = interpolate(
-      scrollY.value,
-      inputRange,
-      [0.7, 1, 0.9],
-      'clamp'
-    );
-
-    // 강조되는 카드가 가장 위에 표시되도록 zIndex 계산
-    const zIndex = interpolate(
-      scrollY.value,
-      inputRange,
-      [totalCount - index, totalCount + 100, totalCount - index - 1],
-      'clamp'
-    );
+    if (hasAnyExpanded) {
+      if (isExpanded) {
+        // 선택된 카드는 화면 중앙으로 이동
+        const headerOffset = 80;
+        const bottomTabOffset = 80; 
+        const availableHeight = SCREEN_HEIGHT - insets.top - headerOffset - insets.bottom - bottomTabOffset;
+        
+        const viewportCenter = scrollY.value + (availableHeight / 2) - (CARD_HEIGHT / 2) + 10;
+        
+        translateY = withSpring(viewportCenter, springConfig);
+        scale = withSpring(1.05, springConfig);
+        zIndex = 1000;
+        opacity = 1;
+      } else {
+        // 선택되지 않은 카드들은 약간만 투명하게 하여 배경이 어두워 보이지 않도록 함
+        opacity = withSpring(0.4, { damping: 20, stiffness: 100 });
+        
+        if (index < expandedIndex) {
+          translateY = withSpring(baseTranslateY - 60, springConfig);
+        } else {
+          translateY = withSpring(baseTranslateY + 60, springConfig);
+        }
+      }
+    } else {
+      translateY = withSpring(baseTranslateY, springConfig);
+      scale = withSpring(1, springConfig);
+      opacity = withSpring(1, springConfig);
+    }
 
     return {
-      transform: [{ scale: withSpring(scale, springConfig) }],
-      opacity: withSpring(opacity, springConfig),
-      zIndex: Math.round(zIndex),
+      transform: [{ translateY }, { scale }],
+      zIndex,
+      opacity,
     };
   });
 
-  const handlePress = useCallback(() => {
-    onPress(item);
-  }, [item, onPress]);
-
-  const accessibilityLabel = `${item.year}년 ${item.month}월 통계 보기. 연속 ${item.streakDays}일 성공, 성공률 ${item.successRate}%`;
-
   return (
-    <AnimatedPressable
-      onPress={handlePress}
-      style={[styles.cardWrapper, { marginTop: index === 0 ? 0 : -CARD_OVERLAP }, animatedStyle]}
-      accessibilityLabel={accessibilityLabel}
-      accessibilityRole="button"
-      accessibilityHint="탭하여 상세 통계 보기"
-    >
-      <View style={[styles.cardOuter, { backgroundColor: color.bg }]}>
-        <View style={styles.cardContent}>
-          {/* 상단: 월 + 성공률 */}
+    <Animated.View style={[styles.cardWrapper, animatedStyle]}>
+      <View style={[styles.card, { backgroundColor: color.bg }]}>
+        {/* 카드 탭(확장/축소) 영역만 Pressable — 상세 보기 버튼과 터치 영역 분리 */}
+        <Pressable
+          onPress={onPress}
+          style={styles.cardPressable}
+          accessibilityLabel={`${item.year}년 ${item.month}월 통계 카드`}
+          accessibilityRole="button"
+        >
           <View style={styles.cardHeader}>
-            <View style={styles.monthSection}>
-              <Text style={[styles.yearLabel, { color: color.accent }]}>
-                {item.year}년
-              </Text>
-              <Text style={[styles.monthLabel, { color: color.text }]}>
-                {MONTH_NAMES_KR[item.month - 1]}
+            <View style={styles.headerLeft}>
+              <Text style={[styles.cardTitle, { color: color.text }]}>
+                {item.year} {MONTH_NAMES_KR[item.month - 1]}
               </Text>
             </View>
-            <View style={styles.rateSection}>
+          </View>
+
+          <View style={styles.cardBody}>
+            <View style={styles.mainInfo}>
+              <Text style={[styles.rateValue, { color: color.text }]}>
+                {String(item.successRate)}%
+              </Text>
               <Text style={[styles.rateLabel, { color: color.accent }]}>
                 성공률
               </Text>
-              <Text style={[styles.rateValue, { color: color.text }]}>
-                {item.successRate}%
-              </Text>
+            </View>
+
+            <View style={styles.footerInfo}>
+              <View style={styles.streakInfo}>
+                <Text style={[styles.streakValue, { color: color.text }]}>
+                  {item.streakDays}일
+                </Text>
+                <Text style={[styles.streakLabel, { color: color.accent }]}>
+                  연속 달성
+                </Text>
+              </View>
             </View>
           </View>
+        </Pressable>
 
-          {/* 하단: 연속 성공 일수 */}
-          <View style={styles.cardFooter}>
-            <View style={[styles.streakBadge, { backgroundColor: color.accent + '20' }]}>
-              <Feather name="zap" size={14} color={color.accent} />
-              <Text style={[styles.streakText, { color: color.text }]}>
-                연속 {item.streakDays}일
-              </Text>
-            </View>
-            <Feather name="chevron-right" size={20} color={color.accent} />
-          </View>
-        </View>
+        {/* 확장 시 상세 보기 버튼 — 별도 Pressable이라 카드 탭과 겹치지 않음 */}
+        {isExpanded && (
+          <Pressable
+            style={[styles.detailButton, { borderColor: color.accent }]}
+            onPress={onDetail}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityLabel="월별 상세 보기"
+            accessibilityRole="button"
+          >
+            <Text style={[styles.detailButtonText, { color: color.text }]}>상세 보기</Text>
+            <Feather name="chevron-right" size={16} color={color.text} />
+          </Pressable>
+        )}
 
-        {/* 카드 테두리 */}
-        <View style={styles.cardBorderOverlay} />
+        <View style={[styles.cardBorder, { borderColor: 'rgba(0,0,0,0.05)' }]} />
       </View>
-    </AnimatedPressable>
+    </Animated.View>
   );
 };
 
-const MonthlyAlbumPage: React.FC<Props> = ({
-  onSelectMonth,
-}) => {
+const MonthlyAlbumPage: React.FC<Props> = ({ onSelectMonth }) => {
   const insets = useSafeAreaInsets();
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const scrollY = useSharedValue(0);
 
-  // Mock 데이터 사용 (실제 데이터 소스 연결 시 교체)
-  const monthlyStats = generateMockStats();
+  const monthlyStats = useMemo(() => generateMockStats(), []);
+
+  const contentHeight = useMemo(() => {
+    return (monthlyStats.length - 1) * STACK_SPACING + CARD_HEIGHT;
+  }, [monthlyStats.length]);
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -218,71 +240,78 @@ const MonthlyAlbumPage: React.FC<Props> = ({
     },
   });
 
-  const handleCardPress = useCallback((item: MonthlyStatData) => {
-    if (onSelectMonth) {
-      onSelectMonth(item.year, item.month);
-    }
-  }, [onSelectMonth]);
+  const handleCardPress = useCallback((index: number) => {
+    setExpandedIndex((prev) => (prev === index ? null : index));
+  }, []);
 
-  const renderCard = useCallback(
-    ({ item, index }: { item: MonthlyStatData; index: number }) => (
-      <CardItem
-        item={item}
-        index={index}
-        scrollY={scrollY}
-        totalCount={monthlyStats.length}
-        onPress={handleCardPress}
-      />
-    ),
-    [scrollY, handleCardPress, monthlyStats.length]
+  const handleDetail = useCallback(
+    (item: MonthlyStatData) => {
+      setExpandedIndex(null); // 확장된 카드 먼저 닫기
+      if (onSelectMonth) {
+        onSelectMonth(item.year, item.month); // 해당 월의 캘린더 뷰로 이동
+      }
+    },
+    [onSelectMonth],
   );
-
-  const keyExtractor = useCallback(
-    (item: MonthlyStatData) => `${item.year}-${item.month}`,
-    []
-  );
-
-  // 리스트 전체 높이 계산
-  const listContentHeight =
-    monthlyStats.length > 0
-      ? CARD_HEIGHT + (monthlyStats.length - 1) * (CARD_HEIGHT - CARD_OVERLAP)
-      : 0;
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      {/* 배경 */}
-      <View style={[styles.background, { backgroundColor: '#FAF8F5' }]} />
-
-      <Box className="flex-1">
-        {/* 헤더 */}
-        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <View>
-            <Text style={styles.headerSubtitle}>나의 기록</Text>
-            <Text style={styles.headerTitle}>월별 통계</Text>
-          </View>
-          <View style={{ width: 22 }} />
-        </View>
-
-        {/* 카드 스택 */}
-        <Animated.FlatList
-          data={monthlyStats}
-          renderItem={renderCard}
-          keyExtractor={keyExtractor}
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.listContent,
-            {
-              paddingTop: 20,
-              paddingBottom: insets.bottom + SCREEN_HEIGHT * 0.3,
-              minHeight: listContentHeight + insets.bottom + SCREEN_HEIGHT * 0.3,
-            },
+      <Box className="flex-1" style={styles.screenBg}>
+        <Animated.View 
+          style={[
+            styles.screenHeader, 
+            { paddingTop: insets.top + 16 },
+            expandedIndex !== null && { opacity: 0 } 
           ]}
-          decelerationRate="fast"
-          snapToInterval={CARD_HEIGHT - CARD_OVERLAP}
-          snapToAlignment="start"
-        />
+        >
+          <VStack>
+            <Text style={styles.screenSubtitle}>나의 기록</Text>
+            <Heading style={styles.screenTitle}>월별 통계</Heading>
+          </VStack>
+          <Pressable style={styles.settingsButton}>
+            <Feather name="settings" size={24} color="#000000" />
+          </Pressable>
+        </Animated.View>
+
+        {/* Backdrop - 투명하게 유지하여 화면이 어두워지지 않도록 함 */}
+        {expandedIndex !== null && (
+          <View 
+            style={[StyleSheet.absoluteFill, { zIndex: 500 }]}
+          >
+            <Pressable 
+              style={StyleSheet.absoluteFill} 
+              onPress={() => setExpandedIndex(null)}
+            />
+          </View>
+        )}
+
+        {/* Scrollable Card Stack Container */}
+        <View style={styles.scrollContainer}>
+          <Animated.ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+            scrollEnabled={expandedIndex === null}
+          >
+            <View style={styles.stackContainer}>
+              {monthlyStats.map((item, index) => (
+                <WalletCard
+                  key={`${item.year}-${item.month}`}
+                  item={item}
+                  index={index}
+                  totalCount={monthlyStats.length}
+                  expandedIndex={expandedIndex}
+                  scrollY={scrollY}
+                  onPress={() => handleCardPress(index)}
+                  onDetail={() => handleDetail(item)}
+                  insets={insets}
+                />
+              ))}
+            </View>
+          </Animated.ScrollView>
+        </View>
       </Box>
     </GestureHandlerRootView>
   );
@@ -292,104 +321,156 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  background: {
-    ...StyleSheet.absoluteFillObject,
+  screenBg: {
+    backgroundColor: '#FAF8F5',
   },
-  header: {
+  screenHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: 24,
+    marginBottom: 12,
+    zIndex: 2000,
   },
-  headerSubtitle: {
+  screenSubtitle: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#8A8A8A',
+    fontWeight: '600',
+    color: '#a3a3a3',
+    fontFamily: 'WantedSans-SemiBold',
     marginBottom: 4,
   },
-  headerTitle: {
-    fontSize: 28,
+  screenTitle: {
+    fontSize: 32,
     fontWeight: '700',
-    color: '#2C2C2C',
+    color: '#000000',
     fontFamily: 'WantedSans-Bold',
   },
-  listContent: {
-    paddingHorizontal: 20,
+  settingsButton: {
+    padding: 8,
+    marginBottom: -4,
+  },
+  scrollContainer: {
+    flex: 1,
+    marginBottom: 100, 
+    overflow: 'hidden',
+    backgroundColor: '#FAF8F5', // 배경색 명시
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 12, // 양옆에 최소한의 여백(12px)을 두어 카드가 화면 끝에 너무 붙지 않게 함
+    paddingBottom: 40, 
+  },
+  stackContainer: {
+    height: 12 * 60 + 200, 
+    paddingTop: 10,
   },
   cardWrapper: {
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
-    zIndex: 1,
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    width: SCREEN_WIDTH - 24, // 양옆 12px씩 제외
   },
-  cardOuter: {
-    flex: 1,
-    borderRadius: 24,
+  cardPressable: {
+    flex: 1, // 내부 콘텐츠가 공간을 차지할 수 있도록 flex 부여
+    width: '100%',
+  },
+  card: {
+    width: '100%',
+    height: CARD_HEIGHT,
+    borderRadius: 24, // 가이드라인 lg(24px) 반영
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
-    elevation: 10,
-  },
-  cardBorderOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
-  },
-  cardContent: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'space-between',
+    elevation: 8,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    paddingHorizontal: 24, // xl(32px) 보다는 카드 내부이므로 lg(24px) 정도가 적당
+    paddingVertical: 18,
   },
-  monthSection: {
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardTitle: {
+    fontSize: 18, // Subtitle (18-22px) 반영
+    fontWeight: '600',
+    fontFamily: 'WantedSans-SemiBold',
+    letterSpacing: -0.3,
+  },
+  cardBody: {
     flex: 1,
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    justifyContent: 'center',
   },
-  yearLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  monthLabel: {
-    fontSize: 26,
-    fontWeight: '700',
-    fontFamily: 'WantedSans-Bold',
-  },
-  rateSection: {
-    alignItems: 'flex-end',
-  },
-  rateLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    marginBottom: 2,
+  mainInfo: {
+    marginTop: 20, // 연/월 영역과의 여백 추가
+    marginBottom: 25, // 연속 성공 영역과의 여백 추가
   },
   rateValue: {
-    fontSize: 22,
+    fontSize: 32, // 기존 42px에서 32px로 축소 (Title 스타일 적용)
+    fontWeight: '700',
+    fontFamily: 'WantedSans-Bold',
+    letterSpacing: -0.5,
+  },
+  rateLabel: {
+    fontSize: 13, // Caption (11-13px) 반영
+    fontWeight: '700',
+    fontFamily: 'WantedSans-SemiBold',
+    marginTop: 2,
+  },
+  footerInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  streakInfo: {
+    flex: 1,
+  },
+  streakValue: {
+    fontSize: 22, // Subtitle (18-22px) 반영
     fontWeight: '700',
     fontFamily: 'WantedSans-Bold',
   },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  streakLabel: {
+    fontSize: 13, // Caption (11-13px) 반영
+    fontWeight: '700',
+    fontFamily: 'WantedSans-SemiBold',
+    marginTop: 2,
   },
-  streakBadge: {
+  detailButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    alignSelf: 'flex-end',
+    marginHorizontal: 24,
+    marginBottom: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 20,
-    gap: 6,
+    borderWidth: 1.5,
   },
-  streakText: {
-    fontSize: 14,
-    fontWeight: '600',
+  detailButtonText: {
+    fontSize: 13, // Caption (11-13px) 반영
+    fontWeight: '700',
+    fontFamily: 'WantedSans-SemiBold',
+    marginRight: 4,
+  },
+  cardBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
+    borderWidth: 0.5,
+    pointerEvents: 'none',
+  },
+  backdrop: {
+    backgroundColor: 'transparent', // 배경 어둡기 완전 제거
+    zIndex: 10, 
   },
 });
 
