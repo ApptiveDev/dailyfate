@@ -24,6 +24,7 @@ interface Props {
   onSelectPhoto: (photo: PhotoEntry) => void;
   onSelectEmptyDay: (date: Date) => void;
   onOpenSettings: () => void;
+  onSelectMonth?: (year: number, month: number) => void;
 }
 
 // 월별 통계 데이터 타입
@@ -205,6 +206,7 @@ const CardItem: React.FC<CardItemProps> = ({ item, index, scrollY, totalCount, o
 
 const MonthlyAlbumPage: React.FC<Props> = ({
   onOpenSettings,
+  onSelectMonth,
 }) => {
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
@@ -219,13 +221,10 @@ const MonthlyAlbumPage: React.FC<Props> = ({
   });
 
   const handleCardPress = useCallback((item: MonthlyStatData) => {
-    // TODO: 월별 상세 페이지로 이동
-    // 현재 프로젝트에 월별 상세 페이지가 없으므로 fallback 처리
-    // 향후 router.push(`/monthly/${item.year}/${item.month}`) 등으로 연결
-    console.warn(
-      `[MonthlyAlbumPage] 월별 상세 페이지 미구현: ${item.year}년 ${item.month}월 선택됨`
-    );
-  }, []);
+    if (onSelectMonth) {
+      onSelectMonth(item.year, item.month);
+    }
+  }, [onSelectMonth]);
 
   const renderCard = useCallback(
     ({ item, index }: { item: MonthlyStatData; index: number }) => (
